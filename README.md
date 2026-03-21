@@ -97,7 +97,23 @@ python optimizer.py --input ub26_input_from_kalk.json --output ub26_result_from_
 
 ## Build Static HTML Report
 
-Generate a publishable static page (for example for GitHub Pages) from one input/result pair:
+The report supports two modes (`vagy-vagy`):
+- `full`: optimizer input + optimizer result + `Kalk.html`
+- `final-only`: only `final.csv` input (recommended for publishing)
+
+### Final-only mode (recommended)
+
+```bash
+python build_static_html.py \
+  --final-only \
+  --final-csv data/final.csv \
+  --output docs/index.html \
+  --title "UB26 Futóbeosztás" \
+  --team-name "Csiga Csillagok" \
+  --race-date "2026-04-25"
+```
+
+### Full mode
 
 ```bash
 python build_static_html.py \
@@ -105,15 +121,29 @@ python build_static_html.py \
   --input ub26_input_car_order_lajek7_rest20_gabor13_nori11.json \
   --result ub26_result_car_order_lajek7_rest20_gabor13_nori11.json \
   --output docs/index.html \
-  --final-csv "../garmin-training/final.csv" \
-  --title "UB26 Runner Schedule"
+  --title "UB26 Futóbeosztás" \
+  --team-name "Csiga Csillagok"
 ```
 
 The report includes:
 - runner summary (target/assigned/overflow/underfill, runtime, dark minutes)
 - block timeline with start/end timestamps
 - full segment-level timeline
-- optional `final.csv` snapshot section (runner + segment tables)
+
+## GitHub Pages
+
+Repository includes workflow: [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
+
+Behavior:
+- on push to `main`, it regenerates `docs/index.html` from `data/final.csv`
+- deploys the `docs/` folder to GitHub Pages
+
+Setup in GitHub:
+1. Repository `Settings` -> `Pages`
+2. `Build and deployment` -> `Source`: `GitHub Actions`
+3. Commit and push changes to `main`
+
+From this point, every edit to `data/final.csv` (or the script/workflow) republishes the page.
 
 ## Input schema
 
