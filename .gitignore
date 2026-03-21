@@ -1,0 +1,15 @@
+.DS_Store
+.venv/
+.pycache/
+__pycache__/
+*.pyc
+.claude/
+
+# Generated planning outputs (keep repository clean)
+ub26_*.json
+ub26_*.csv
+ub26_*.md
+ub26_*.txt
+
+# Local runtime artifacts
+*.log

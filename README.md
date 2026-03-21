@@ -1,0 +1,198 @@
+# Runner Assignment Optimizer (CP-SAT)
+
+This project implements a practical version of the optimizer from the shared plan:
+
+- exact segment assignment
+- contiguous block count limits per runner (`max_blocks` 1 or 2)
+- distance-to-target objective
+- optional overflow caps
+- optional current-plan stability penalty
+- optional same-car cohesion penalty (segment-index span)
+
+## Projekt Célja (UB)
+
+Az alkalmazás célja, hogy egy **UltraBalaton váltócsapat futóbeosztását optimalizálja**:
+- ki melyik szakaszt fusson,
+- ki hány blokkban fusson,
+- hogyan legyen a sorrend és a blokkhatár,
+- úgy, hogy a megadott korlátok teljesüljenek és a pihenőidők lehetőleg maximalizálódjanak.
+
+## Igények És Feltételek (Összefoglaló)
+
+### Kemény korlátok (must-have)
+
+- Minden szakaszt pontosan 1 futó fut.
+- Futónként a blokkszám a megadott `min_blocks..max_blocks` tartományban van.
+- A blokkok mindig folytonosak (nincs szétdarabolt kiosztás).
+- `min_blocks=1,max_blocks=1` esetén pontosan 1 blokk.
+- `min_blocks=2,max_blocks=2` esetén pontosan 2 blokk.
+- Opcionális minimális blokk-hossz: `settings.min_block_km` (pl. 4.0 km).
+- Opcionális minimum pihenő 2x futóknál: `settings.min_rest_gap_segments`
+  (vagy futó szinten: `runner.min_rest_gap_segments`).
+- Opcionális sorrendkorlát 2-blokkosokra:
+  `settings.enforce_second_round_order=true` esetén a második kör sorrendje megegyezik az első kör sorrendjével.
+- Opcionális km felső korlát:
+  globális (`settings.max_overflow_km`) vagy futó-szintű (`runner.max_overflow_km`).
+
+### Puha célok (objective / súlyozott optimalizálás)
+
+- Vállalt km-től eltérés minimalizálása (`overflow`, `underfill` súlyok).
+- 2-blokkos futók pihenőrésének maximalizálása (`rest_gap` súly + `runner.rest_priority`).
+- Aktuális tervhez való közelség (szakaszcsere büntetés, `change`).
+- Azonos autóban lévők összetartása (span minimalizálás, `car_span`).
+
+### UB-specifikus szabályok (aktuális beszélgetés alapján)
+
+- 2x futók: `Dóri, Anna, Nóri, Lilla, Lackó, Bianka, Gábor`
+- 1x futók: `Lajek, Peti, Levi, Regi`
+- 1x futók nem bonthatók több blokkra.
+- 2x futóknál az első blokk aránya az össztávból: minimum 40%, maximum 70%.
+- 2x futóknál második kör sorrendje kövesse az elsőt.
+- Pihenő maximalizálás minden 2x futónál.
+
+## Install
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Run
+
+```bash
+python optimizer.py --input sample_input.json --pretty
+```
+
+Write to file:
+
+```bash
+python optimizer.py --input sample_input.json --output result.json --pretty
+```
+
+## Extract From `Kalk.html`
+
+Generate input directly from your exported Google Sheets HTML:
+
+```bash
+python extract_kalk.py \
+  --kalk-html "/path/to/Kalk.html" \
+  --output ub26_input_from_kalk.json
+```
+
+If you want car groups from the known UB setup:
+
+```bash
+python extract_kalk.py \
+  --kalk-html "/path/to/Kalk.html" \
+  --output ub26_input_from_kalk_with_cars.json \
+  --include-default-cars
+```
+
+Then run:
+
+```bash
+python optimizer.py --input ub26_input_from_kalk.json --output ub26_result_from_kalk.json --pretty
+```
+
+## Build Static HTML Report
+
+Generate a publishable static page (for example for GitHub Pages) from one input/result pair:
+
+```bash
+python build_static_html.py \
+  --kalk-html "/path/to/Kalk.html" \
+  --input ub26_input_car_order_lajek7_rest20_gabor13_nori11.json \
+  --result ub26_result_car_order_lajek7_rest20_gabor13_nori11.json \
+  --output docs/index.html \
+  --final-csv "../garmin-training/final.csv" \
+  --title "UB26 Runner Schedule"
+```
+
+The report includes:
+- runner summary (target/assigned/overflow/underfill, runtime, dark minutes)
+- block timeline with start/end timestamps
+- full segment-level timeline
+- optional `final.csv` snapshot section (runner + segment tables)
+
+## Input schema
+
+`segments`:
+
+```json
+[{ "id": 1, "km": 7.0 }]
+```
+
+`runners`:
+
+```json
+[
+  {
+    "name": "Bianka",
+    "target_km": 30.0,
+    "min_blocks": 1,
+    "max_blocks": 2,
+    "car_id": "3",
+    "max_overflow_km": 4.0,
+    "rest_priority": 1,
+    "min_rest_gap_segments": 20
+  }
+]
+```
+
+`current_owner` (optional):
+
+```json
+{ "1": "Bianka", "2": "Lacko" }
+```
+
+`fixed_owner` (optional, hard assignment):
+
+```json
+{ "1": "Bianka" }
+```
+
+`settings` (optional):
+
+```json
+{
+  "scale": 10,
+  "time_limit_sec": 30,
+  "num_workers": 8,
+  "max_overflow_km": 4.0,
+  "min_block_km": 4.0,
+  "min_rest_gap_segments": 20,
+  "first_leg_ratio_min": 0.4,
+  "first_leg_ratio_max": 0.7,
+  "enforce_second_round_order": true,
+  "enforce_car_block_grouping": true,
+  "car_block_order": ["3", "2", "1", "4", "3", "2"],
+  "require_every_runner_used": true,
+  "weights": {
+    "overflow": 4,
+    "underfill": 1,
+    "change": 2,
+    "car_span": 1,
+    "rest_gap": 6
+  }
+}
+```
+
+## Notes
+
+- `max_blocks=1` guarantees one contiguous block.
+- `max_blocks=2` allows one or two contiguous blocks.
+- `min_block_km>0` forbids too-short standalone blocks.
+- `min_rest_gap_segments` enforces a hard minimum rest-gap (in segment count)
+  between the two blocks of forced 2-block runners.
+- `first_leg_ratio_min/max` enforces first-block ratio for forced 2-block runners
+  (e.g. `0.4..0.7` means first block must be 40%-70% of that runner's assigned total km).
+- `fixed_owner` forces exact runner ownership for specific segments (hard constraint).
+- `enforce_second_round_order=true` keeps first and second-round order aligned for forced 2-block runners.
+- `enforce_car_block_grouping=true` enforces car groups as contiguous car-level blocks
+  (derived block count from members' `min_blocks`, typically 1 for one-round cars and 2 for two-round cars).
+- `car_block_order` enforces a strict car-block sequence on the timeline
+  (currently supports up to 2 occurrences per car ID).
+- `rest_priority` tunes per-runner rest optimization strength (only relevant for 2-block runners).
+- Car cohesion currently uses span minimization in segment index space.
+- Strict inserted-runner (<=6 km) car rules are not implemented yet.

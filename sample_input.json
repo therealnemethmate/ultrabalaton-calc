@@ -1,0 +1,50 @@
+{
+  "segments": [
+    { "id": 1, "km": 3.0 },
+    { "id": 2, "km": 2.5 },
+    { "id": 3, "km": 3.2 },
+    { "id": 4, "km": 2.8 },
+    { "id": 5, "km": 3.1 },
+    { "id": 6, "km": 2.9 },
+    { "id": 7, "km": 3.0 },
+    { "id": 8, "km": 2.7 },
+    { "id": 9, "km": 3.4 },
+    { "id": 10, "km": 2.6 },
+    { "id": 11, "km": 3.3 },
+    { "id": 12, "km": 2.5 }
+  ],
+  "runners": [
+    { "name": "Alice", "target_km": 7.0, "min_blocks": 1, "max_blocks": 1, "car_id": "1" },
+    { "name": "Bob", "target_km": 7.0, "min_blocks": 1, "max_blocks": 1, "car_id": "1" },
+    { "name": "Cara", "target_km": 8.0, "min_blocks": 2, "max_blocks": 2, "car_id": "2", "rest_priority": 1 },
+    { "name": "Dan", "target_km": 7.0, "min_blocks": 2, "max_blocks": 2, "car_id": "2", "rest_priority": 1 },
+    { "name": "Eli", "target_km": 6.0, "min_blocks": 1, "max_blocks": 2, "car_id": null }
+  ],
+  "current_owner": {
+    "1": "Alice",
+    "2": "Alice",
+    "3": "Bob",
+    "4": "Bob",
+    "5": "Cara",
+    "6": "Cara",
+    "7": "Dan",
+    "8": "Dan",
+    "9": "Eli",
+    "10": "Eli",
+    "11": "Cara",
+    "12": "Dan"
+  },
+  "settings": {
+    "scale": 10,
+    "time_limit_sec": 20,
+    "num_workers": 8,
+    "max_overflow_km": 2.5,
+    "require_every_runner_used": true,
+    "weights": {
+      "overflow": 4,
+      "underfill": 1,
+      "change": 2,
+      "car_span": 1
+    }
+  }
+}

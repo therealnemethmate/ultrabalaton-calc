@@ -1,0 +1,156 @@
+{
+  "status": "OPTIMAL",
+  "status_code": 4,
+  "objective": 112,
+  "scale": 10,
+  "segment_owner": {
+    "5": "Alice",
+    "6": "Alice",
+    "2": "Bob",
+    "3": "Bob",
+    "4": "Bob",
+    "7": "Cara",
+    "8": "Cara",
+    "12": "Cara",
+    "9": "Dan",
+    "11": "Dan",
+    "1": "Eli",
+    "10": "Eli"
+  },
+  "runners": [
+    {
+      "name": "Alice",
+      "car_id": "1",
+      "target_km": 7.0,
+      "assigned_km": 6.0,
+      "overflow_km": 0.0,
+      "underfill_km": 1.0,
+      "max_blocks": 1,
+      "block_count": 1,
+      "segments": [
+        5,
+        6
+      ],
+      "ranges": [
+        {
+          "start_index": 4,
+          "end_index": 5,
+          "start_segment_id": 5,
+          "end_segment_id": 6
+        }
+      ]
+    },
+    {
+      "name": "Bob",
+      "car_id": "1",
+      "target_km": 7.0,
+      "assigned_km": 8.5,
+      "overflow_km": 1.5,
+      "underfill_km": 0.0,
+      "max_blocks": 1,
+      "block_count": 1,
+      "segments": [
+        2,
+        3,
+        4
+      ],
+      "ranges": [
+        {
+          "start_index": 1,
+          "end_index": 3,
+          "start_segment_id": 2,
+          "end_segment_id": 4
+        }
+      ]
+    },
+    {
+      "name": "Cara",
+      "car_id": "2",
+      "target_km": 8.0,
+      "assigned_km": 8.2,
+      "overflow_km": 0.2,
+      "underfill_km": 0.0,
+      "max_blocks": 2,
+      "block_count": 2,
+      "segments": [
+        7,
+        8,
+        12
+      ],
+      "ranges": [
+        {
+          "start_index": 6,
+          "end_index": 7,
+          "start_segment_id": 7,
+          "end_segment_id": 8
+        },
+        {
+          "start_index": 11,
+          "end_index": 11,
+          "start_segment_id": 12,
+          "end_segment_id": 12
+        }
+      ]
+    },
+    {
+      "name": "Dan",
+      "car_id": "2",
+      "target_km": 7.0,
+      "assigned_km": 6.7,
+      "overflow_km": 0.0,
+      "underfill_km": 0.3,
+      "max_blocks": 2,
+      "block_count": 2,
+      "segments": [
+        9,
+        11
+      ],
+      "ranges": [
+        {
+          "start_index": 8,
+          "end_index": 8,
+          "start_segment_id": 9,
+          "end_segment_id": 9
+        },
+        {
+          "start_index": 10,
+          "end_index": 10,
+          "start_segment_id": 11,
+          "end_segment_id": 11
+        }
+      ]
+    },
+    {
+      "name": "Eli",
+      "car_id": null,
+      "target_km": 6.0,
+      "assigned_km": 5.6,
+      "overflow_km": 0.0,
+      "underfill_km": 0.4,
+      "max_blocks": 2,
+      "block_count": 2,
+      "segments": [
+        1,
+        10
+      ],
+      "ranges": [
+        {
+          "start_index": 0,
+          "end_index": 0,
+          "start_segment_id": 1,
+          "end_segment_id": 1
+        },
+        {
+          "start_index": 9,
+          "end_index": 9,
+          "start_segment_id": 10,
+          "end_segment_id": 10
+        }
+      ]
+    }
+  ],
+  "car_span_by_car_id": {
+    "1": 4,
+    "2": 5
+  }
+}
