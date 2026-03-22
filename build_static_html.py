@@ -658,6 +658,25 @@ def _render_html(
         cumulative += float(s.get("km", 0.0))
         cumulative_end_km[int(s["seg_id"])] = cumulative
 
+    # Re-number cars by first appearance in timeline:
+    # first starter -> Autó 1, second distinct car -> Autó 2, etc.
+    raw_to_display_car: Dict[str, str] = {}
+    next_display_car = 1
+    for s in segments_sorted:
+        runner_name = _clean(s.get("runner", ""))
+        raw_car = _clean(runner_car_map.get(runner_name, "")) or "?"
+        if raw_car in raw_to_display_car:
+            continue
+        if raw_car == "?":
+            raw_to_display_car[raw_car] = "?"
+            continue
+        raw_to_display_car[raw_car] = str(next_display_car)
+        next_display_car += 1
+
+    def _display_car_id(raw_car_id: str) -> str:
+        rid = _clean(raw_car_id) or "?"
+        return raw_to_display_car.get(rid, rid if rid != "?" else "?")
+
     switch_start_seg_ids = {int(b["start_seg"]) for b in blocks_sorted}
     timeline_rows: List[str] = []
     timeline_mobile_cards: List[str] = []
@@ -679,7 +698,8 @@ def _render_html(
         km = float(s.get("km", 0.0))
         km_end = cumulative_end_km.get(sid, 0.0)
         runner_name = _clean(s.get("runner", ""))
-        car_id = _clean(runner_car_map.get(runner_name, "")) or "?"
+        raw_car_id = _clean(runner_car_map.get(runner_name, "")) or "?"
+        car_id = _display_car_id(raw_car_id)
         used_car_ids.add(car_id)
         runner_anchor = runner_anchor_by_name.get(runner_name, "")
         runner_link = (
