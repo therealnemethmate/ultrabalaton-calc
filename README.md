@@ -105,6 +105,20 @@ The report includes:
 - block timeline with start/end timestamps
 - full segment-level timeline
 
+### Optimizer vs Final compare page
+
+Generate an extra comparison page from optimizer output vs current `final.csv`:
+
+```bash
+python optimizer.py --input data/runner_plan_input.json --output data/optimizer_result.json --pretty
+
+python build_optimizer_compare_html.py \
+  --final-csv data/final.csv \
+  --optimizer-json data/optimizer_result.json \
+  --output docs/optimizer_compare.html \
+  --title "UB26 összehasonlítás: final vs optimizer"
+```
+
 ## Bike Escort Post-Gen (Előkészítés)
 
 Kerékpáros kísérőket post-process lépésben tudsz kiosztani a `final.csv`-re:
@@ -138,6 +152,7 @@ Repository includes workflow: [`.github/workflows/pages.yml`](.github/workflows/
 Behavior:
 
 - on push to `main`, it regenerates `docs/index.html` from `data/final.csv`
+- it also builds `docs/optimizer_compare.html` from `data/runner_plan_input.json` + `data/final.csv`
 - deploys the `docs/` folder to GitHub Pages
 
 Setup in GitHub:

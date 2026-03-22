@@ -6,9 +6,12 @@ on:
       - main
     paths:
       - build_static_html.py
+      - build_optimizer_compare_html.py
       - assign_bike_escorts.py
+      - optimizer.py
       - requirements.txt
       - data/final.csv
+      - data/runner_plan_input.json
       - data/bike_escorts.json
       - data/bike_escorts.sample.json
       - .github/workflows/pages.yml
@@ -58,6 +61,22 @@ jobs:
             --title "UB26 Futóbeosztás" \
             --team-name "Csiga Csillagok" \
             --race-date "2026-04-25"
+
+      - name: Build optimizer comparison HTML
+        run: |
+          if [ -f data/runner_plan_input.json ]; then
+            python optimizer.py \
+              --input data/runner_plan_input.json \
+              --output data/optimizer_result.json \
+              --pretty
+            python build_optimizer_compare_html.py \
+              --final-csv data/final.csv \
+              --optimizer-json data/optimizer_result.json \
+              --output docs/optimizer_compare.html \
+              --title "UB26 összehasonlítás: final vs optimizer"
+          else
+            echo "No data/runner_plan_input.json found, skipping optimizer compare page."
+          fi
 
       - name: Disable Jekyll
         run: touch docs/.nojekyll

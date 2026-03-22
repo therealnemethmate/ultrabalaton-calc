@@ -135,6 +135,32 @@ def _load_stage_metadata(path: Path) -> Dict[int, Dict[str, Any]]:
     return out
 
 
+def _load_runner_car_map(path: Path) -> Dict[str, str]:
+    if not path.exists():
+        return {}
+    try:
+        payload = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    try:
+        data = json.loads(payload)
+    except Exception:
+        return {}
+    runners = data.get("runners", []) if isinstance(data, dict) else []
+    if not isinstance(runners, list):
+        return {}
+    out: Dict[str, str] = {}
+    for item in runners:
+        if not isinstance(item, dict):
+            continue
+        name = _clean(item.get("name"))
+        car_id = _clean(item.get("car_id"))
+        if not name or not car_id:
+            continue
+        out[name] = car_id
+    return out
+
+
 def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
     rows: List[List[str]] = []
     with final_csv_path.open("r", encoding="utf-8", newline="") as f:
@@ -401,9 +427,11 @@ def _render_html(
     team_name: str,
     final_csv_snapshot: Optional[Dict[str, Any]] = None,
     stage_meta: Optional[Dict[int, Dict[str, Any]]] = None,
+    runner_car_map: Optional[Dict[str, str]] = None,
 ) -> str:
     del final_csv_snapshot
     stage_meta = stage_meta or {}
+    runner_car_map = runner_car_map or {}
     status = html.escape(str(report.get("status", "-")))
     start_dt = report["start_dt"].strftime("%Y-%m-%d %H:%M")
     finish_dt = report["finish_dt"].strftime("%Y-%m-%d %H:%M")
@@ -451,12 +479,31 @@ def _render_html(
             runner_first_seg[name] = int(s["seg_id"])
     runner_order = [name for name, _ in sorted(runner_first_seg.items(), key=lambda kv: kv[1])]
 
+    def _fmt_km(value: Optional[Any]) -> str:
+        if value in (None, ""):
+            return "-"
+        try:
+            return f"{float(value):.1f}"
+        except (TypeError, ValueError):
+            return "-"
+
+    total_km_all = sum(float(s.get("km", 0.0)) for s in segments_sorted)
+    night_km = sum(float(s.get("km", 0.0)) for s in segments_sorted if "🌙" in _clean(s.get("day", "")))
+    day_km = max(0.0, total_km_all - night_km)
+    biker_segments = [s for s in segments_sorted if _clean(s.get("biker", ""))]
+    biker_km = sum(float(s.get("km", 0.0)) for s in biker_segments)
+    unique_bikers = sorted({_clean(s.get("biker", "")) for s in biker_segments if _clean(s.get("biker", ""))})
+
+    runner_anchor_by_name: Dict[str, str] = {}
     runner_nav: List[str] = []
     runner_sections: List[str] = []
 
     for idx, runner_name in enumerate(runner_order, start=1):
         anchor = f"runner-{idx}"
-        runner_nav.append(f"<a class='runner-pill' href='#{anchor}'>{html.escape(runner_name)}</a>")
+        runner_anchor_by_name[runner_name] = anchor
+        runner_nav.append(
+            f"<a class='runner-pill' href='#{anchor}' data-open-tab='runners'>{html.escape(runner_name)}</a>"
+        )
 
         r_segments = segments_by_runner.get(runner_name, [])
         total_km = sum(float(s.get("km", 0.0)) for s in r_segments)
@@ -518,6 +565,84 @@ def _render_html(
             "</section>"
         )
 
+    cumulative_end_km: Dict[int, float] = {}
+    cumulative = 0.0
+    for s in segments_sorted:
+        cumulative += float(s.get("km", 0.0))
+        cumulative_end_km[int(s["seg_id"])] = cumulative
+
+    switch_start_seg_ids = {int(b["start_seg"]) for b in blocks_sorted}
+    timeline_rows: List[str] = []
+    timeline_mobile_cards: List[str] = []
+    used_car_ids: set[str] = set()
+
+    def _car_class(car_id: str) -> str:
+        cid = _clean(car_id)
+        if not cid or cid == "?":
+            return "car-na"
+        safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", cid)
+        return f"car-{safe}"
+
+    def _car_label(car_id: str) -> str:
+        cid = _clean(car_id)
+        return f"Autó {cid}" if cid and cid != "?" else "Autó n/a"
+
+    for s in segments_sorted:
+        sid = int(s["seg_id"])
+        km = float(s.get("km", 0.0))
+        km_end = cumulative_end_km.get(sid, 0.0)
+        runner_name = _clean(s.get("runner", ""))
+        car_id = _clean(runner_car_map.get(runner_name, "")) or "?"
+        used_car_ids.add(car_id)
+        runner_anchor = runner_anchor_by_name.get(runner_name, "")
+        runner_link = (
+            f"<a href='#{runner_anchor}' data-open-tab='runners'>{html.escape(runner_name)}</a>"
+            if runner_anchor
+            else html.escape(runner_name)
+        )
+        switch_badge = ""
+        if sid == 1:
+            switch_badge = "<span class='switch-badge'>RAJT</span>"
+        elif sid in switch_start_seg_ids:
+            switch_badge = "<span class='switch-badge'>VÁLTÁS</span>"
+        row_cls = f"timeline-row {_car_class(car_id)}"
+        if sid in switch_start_seg_ids and sid != 1:
+            row_cls += " switch-row"
+        timeline_rows.append(
+            f"<tr class='{row_cls}'>"
+            f"<td>{sid}</td>"
+            f"<td><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span></td>"
+            f"<td>{runner_link}</td>"
+            f"<td>{switch_badge}</td>"
+            f"<td>{km:.1f}</td>"
+            f"<td>{km_end:.1f}</td>"
+            f"<td>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</td>"
+            f"<td>{s['start'].strftime('%m.%d %H:%M')} - {s['end'].strftime('%m.%d %H:%M')}</td>"
+            "</tr>"
+        )
+        timeline_mobile_cards.append(
+            "<article class='timeline-card-mobile'>"
+            f"<div class='timeline-card-top'><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span><strong>#{sid}</strong></div>"
+            f"<div class='timeline-card-line'><span>Futó:</span><span>{runner_link}</span></div>"
+            f"<div class='timeline-card-line'><span>Szakasz:</span><span>{km:.1f} km</span></div>"
+            f"<div class='timeline-card-line'><span>Eddigi táv:</span><strong>{km_end:.1f} km</strong></div>"
+            f"<div class='timeline-card-line'><span>Útvonal:</span><span>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</span></div>"
+            f"<div class='timeline-card-line'><span>Idő:</span><span>{s['start'].strftime('%m.%d %H:%M')} - {s['end'].strftime('%m.%d %H:%M')}</span></div>"
+            + (f"<div class='timeline-card-badge'>{switch_badge}</div>" if switch_badge else "")
+            + "</article>"
+        )
+
+    def _car_sort_key(value: str) -> tuple[int, Any]:
+        cid = _clean(value)
+        if cid.isdigit():
+            return (0, int(cid))
+        return (1, cid)
+
+    car_legend = "".join(
+        f"<span class='car-chip {_car_class(cid)}'>{html.escape(_car_label(cid))}</span>"
+        for cid in sorted(used_car_ids, key=_car_sort_key)
+    )
+
     switch_cards: List[str] = []
     for idx, b in enumerate(blocks_sorted):
         prev_runner = "Rajt" if idx == 0 else str(blocks_sorted[idx - 1].get("runner", ""))
@@ -525,27 +650,18 @@ def _render_html(
         stage_name = _clean(b.get("stage_name", ""))
         stage_note_html = f"<div class='switch-note'>{html.escape(stage_name)}</div>" if stage_name else ""
         switch_coord_html = _coord_links(point_coords.get(start_point), cls="switch-nav")
+        start_seg = int(b["start_seg"])
+        km_at_switch = 0.0 if start_seg <= 1 else cumulative_end_km.get(start_seg - 1, 0.0)
         switch_cards.append(
             "<article class='switch-card'>"
             f"<div class='switch-title'>Váltás {idx + 1}: {html.escape(prev_runner)} → {html.escape(str(b.get('runner', '')))}</div>"
             f"<div class='switch-line'><span>Idő:</span><strong>{b['start'].strftime('%m.%d %H:%M')}</strong></div>"
             f"<div class='switch-line'><span>Hely:</span><strong>{html.escape(start_point)}</strong></div>"
             f"<div class='switch-line'><span>Blokk:</span><strong>{int(b['start_seg'])}-{int(b['end_seg'])}</strong></div>"
+            f"<div class='switch-line'><span>Eddigi táv:</span><strong>{km_at_switch:.1f} km</strong></div>"
             f"<div class='switch-line'><span>Következő érkezés:</span><strong>{b['end'].strftime('%m.%d %H:%M')}</strong></div>"
             f"{stage_note_html}"
             f"{switch_coord_html}"
-            "</article>"
-        )
-
-    night_cards: List[str] = []
-    for s in segments_sorted:
-        if "🌙" not in _clean(s.get("day", "")):
-            continue
-        night_cards.append(
-            "<article class='night-card'>"
-            f"<div class='night-title'>#{int(s['seg_id'])} - {html.escape(str(s.get('runner', '')))}</div>"
-            f"<div class='night-route'>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</div>"
-            f"<div class='night-time'>{s['start'].strftime('%m.%d %H:%M')} - {s['end'].strftime('%m.%d %H:%M')}</div>"
             "</article>"
         )
 
@@ -564,11 +680,13 @@ def _render_html(
       --muted:#5c6780;
       --accent:#1f4c9a;
       --accent-soft:#e9f0ff;
-      --night:#0f1f42;
+      --tab:#f3f6ff;
+      --tab-active:#1f4c9a;
+      --tab-active-ink:#ffffff;
     }}
     * {{ box-sizing:border-box; }}
+    html, body {{ margin:0; }}
     body {{
-      margin:0;
       color:var(--ink);
       font-family:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
       background:
@@ -576,7 +694,7 @@ def _render_html(
         radial-gradient(900px 440px at 120% -10%, #ffe8cd 0%, rgba(255,232,205,0) 58%),
         var(--bg);
     }}
-    main {{ max-width:980px; margin:0 auto; padding:12px 10px 28px; }}
+    main {{ max-width:1040px; margin:0 auto; padding:12px 10px 78px; }}
     .panel {{
       background:var(--card);
       border:1px solid var(--line);
@@ -586,7 +704,7 @@ def _render_html(
       box-shadow:0 2px 8px rgba(17,34,68,.04);
     }}
     h1 {{ margin:0; font-size:1.3rem; }}
-    h2 {{ margin:0 0 8px; font-size:1.05rem; }}
+    h2 {{ margin:0 0 8px; font-size:1.06rem; }}
     .sub {{ margin:6px 0 0; color:var(--muted); font-size:.92rem; }}
     .meta-grid {{
       margin-top:10px;
@@ -602,6 +720,158 @@ def _render_html(
     }}
     .meta .k {{ display:block; color:var(--muted); font-size:.76rem; }}
     .meta .v {{ display:block; font-weight:700; margin-top:2px; font-size:.92rem; }}
+    .summary-grid {{
+      margin-top:8px;
+      display:grid;
+      gap:8px;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }}
+    .summary-box {{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:8px;
+      background:#fbfdff;
+    }}
+    .summary-box .k {{ color:var(--muted); font-size:.76rem; display:block; }}
+    .summary-box .v {{ font-size:.96rem; font-weight:700; display:block; margin-top:2px; }}
+    .legend-row {{
+      margin-top:8px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }}
+    .timeline-wrap {{
+      margin-top:10px;
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+    }}
+    .timeline-desktop {{ display:none; }}
+    .timeline-mobile {{
+      margin-top:10px;
+      display:grid;
+      gap:8px;
+    }}
+    .timeline-card-mobile {{
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+      padding:9px;
+    }}
+    .timeline-card-top {{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:5px;
+    }}
+    .timeline-card-line {{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      font-size:.82rem;
+      margin-bottom:2px;
+    }}
+    .timeline-card-line span:first-child {{
+      color:var(--muted);
+      white-space:nowrap;
+      margin-right:8px;
+    }}
+    .timeline-card-line span:last-child {{
+      text-align:right;
+    }}
+    .timeline-card-badge {{
+      margin-top:5px;
+    }}
+    .timeline-table {{
+      width:100%;
+      min-width:920px;
+      border-collapse:collapse;
+      font-size:.82rem;
+    }}
+    .timeline-table th, .timeline-table td {{
+      border-bottom:1px solid var(--line);
+      padding:7px 8px;
+      text-align:left;
+      vertical-align:top;
+    }}
+    .timeline-table th {{
+      background:#eef3ff;
+      color:#30486e;
+      position:sticky;
+      top:0;
+      z-index:1;
+      white-space:nowrap;
+    }}
+    .timeline-table td a {{
+      color:var(--accent);
+      text-decoration:none;
+      font-weight:600;
+    }}
+    .switch-badge {{
+      display:inline-block;
+      border:1px solid #d8d1b0;
+      background:#fff6d9;
+      color:#725d18;
+      border-radius:999px;
+      padding:1px 7px;
+      font-size:.72rem;
+      font-weight:700;
+      letter-spacing:.02em;
+    }}
+    .car-chip {{
+      display:inline-block;
+      border-radius:999px;
+      padding:2px 8px;
+      font-size:.74rem;
+      font-weight:700;
+      border:1px solid #ccd5ea;
+      background:#f5f7fc;
+      color:#2f466f;
+      white-space:nowrap;
+    }}
+    .car-chip.car-1 {{ background:#e8f2ff; border-color:#b8d2ff; color:#1f4c9a; }}
+    .car-chip.car-2 {{ background:#ebf9f1; border-color:#bde6ce; color:#1b6b46; }}
+    .car-chip.car-3 {{ background:#fff4e7; border-color:#f3d2a6; color:#855525; }}
+    .car-chip.car-4 {{ background:#f9eef9; border-color:#e5c6e5; color:#6f3f6f; }}
+    .car-chip.car-na {{ background:#f2f4f8; border-color:#d8deea; color:#5f6d83; }}
+    .timeline-row.car-1 td {{ background:#f7fbff; }}
+    .timeline-row.car-2 td {{ background:#f7fdf9; }}
+    .timeline-row.car-3 td {{ background:#fffaf5; }}
+    .timeline-row.car-4 td {{ background:#fcf8fc; }}
+    .timeline-row.car-na td {{ background:#fafbfc; }}
+    .timeline-row.switch-row td {{
+      border-top:2px solid #c8a85d;
+    }}
+    .tab-nav {{
+      display:flex;
+      gap:8px;
+      overflow-x:auto;
+      padding:4px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#f8faff;
+    }}
+    .tab-nav.top {{ margin-top:12px; }}
+    .tab-btn {{
+      border:1px solid #c9d7f3;
+      background:var(--tab);
+      color:#24426f;
+      border-radius:10px;
+      padding:7px 11px;
+      font-size:.85rem;
+      white-space:nowrap;
+      font-weight:700;
+      cursor:pointer;
+    }}
+    .tab-btn.is-active {{
+      background:var(--tab-active);
+      color:var(--tab-active-ink);
+      border-color:var(--tab-active);
+    }}
+    .tab-page {{ display:none; }}
+    .tab-page.is-active {{ display:block; }}
     .runner-nav {{
       display:flex;
       gap:7px;
@@ -694,8 +964,8 @@ def _render_html(
       font-weight:600;
     }}
     .seg-info {{ margin:7px 0 0; line-height:1.45; font-size:.87rem; }}
-    .switch-grid, .night-grid {{ display:grid; gap:8px; }}
-    .switch-card, .night-card {{
+    .switch-grid {{ display:grid; gap:8px; }}
+    .switch-card {{
       border:1px solid var(--line);
       border-radius:10px;
       padding:9px;
@@ -726,16 +996,28 @@ def _render_html(
       text-decoration:none;
       font-weight:600;
     }}
-    .night-title {{ font-weight:700; font-size:.9rem; }}
-    .night-route {{ margin-top:3px; font-size:.84rem; }}
-    .night-time {{ margin-top:2px; color:var(--muted); font-size:.8rem; }}
     .foot {{ color:var(--muted); font-size:.76rem; }}
+    .mobile-tabs {{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+      background:rgba(244,247,251,.92);
+      backdrop-filter:blur(8px);
+      border-top:1px solid #d5dced;
+      z-index:12;
+    }}
+    .mobile-tabs .tab-nav {{ border-radius:14px; }}
     @media (min-width: 840px) {{
-      main {{ padding:18px 16px 36px; }}
+      main {{ padding:18px 16px 40px; }}
       .panel {{ padding:14px; margin-bottom:12px; }}
       .meta-grid {{ grid-template-columns:repeat(6,minmax(0,1fr)); }}
+      .summary-grid {{ grid-template-columns:repeat(5,minmax(0,1fr)); }}
       .switch-grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
-      .night-grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
+      .timeline-desktop {{ display:block; }}
+      .timeline-mobile {{ display:none; }}
+      .mobile-tabs {{ display:none; }}
     }}
   </style>
 </head>
@@ -752,31 +1034,131 @@ def _render_html(
       <div class=\"meta\"><span class=\"k\">Szakaszok</span><span class=\"v\">{len(segments_sorted)} db</span></div>
       <div class=\"meta\"><span class=\"k\">Koordináták</span><span class=\"v\">{coord_count}/{len(segments_sorted)}</span></div>
     </div>
+    <nav class=\"tab-nav top\" aria-label=\"Oldalfülek\">
+      <button type=\"button\" class=\"tab-btn is-active\" data-tab=\"overview\">Áttekintés</button>
+      <button type=\"button\" class=\"tab-btn\" data-tab=\"switches\">Váltások</button>
+      <button type=\"button\" class=\"tab-btn\" data-tab=\"runners\">Futók</button>
+    </nav>
+  </section>
+
+  <section class=\"tab-page is-active\" id=\"tab-overview\" data-tab-page=\"overview\">
+    <section class=\"panel\">
+      <h2>Gyors Összefoglaló</h2>
+      <div class=\"summary-grid\">
+        <div class=\"summary-box\"><span class=\"k\">Össztáv</span><span class=\"v\">{_fmt_km(total_km_all)} km</span></div>
+        <div class=\"summary-box\"><span class=\"k\">Nappali táv</span><span class=\"v\">{_fmt_km(day_km)} km</span></div>
+        <div class=\"summary-box\"><span class=\"k\">Éjszakai táv</span><span class=\"v\">{_fmt_km(night_km)} km</span></div>
+        <div class=\"summary-box\"><span class=\"k\">Váltások száma</span><span class=\"v\">{len(blocks_sorted)} db</span></div>
+        <div class=\"summary-box\"><span class=\"k\">Bringás lefedettség</span><span class=\"v\">{len(biker_segments)}/{len(segments_sorted)} szakasz, {_fmt_km(biker_km)} km</span></div>
+      </div>
+      <p class=\"sub\">Bringások: {html.escape(', '.join(unique_bikers)) if unique_bikers else 'nincs megadva'}</p>
+      <div class=\"legend-row\">{car_legend}</div>
+      <div class=\"timeline-wrap timeline-desktop\">
+        <table class=\"timeline-table\">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Autó</th>
+              <th>Futó</th>
+              <th>Jel</th>
+              <th>Szakasz km</th>
+              <th>Eddigi táv (km)</th>
+              <th>Útvonal</th>
+              <th>Idő</th>
+            </tr>
+          </thead>
+          <tbody>{''.join(timeline_rows)}</tbody>
+        </table>
+      </div>
+      <div class=\"timeline-mobile\">{''.join(timeline_mobile_cards)}</div>
+      <p class=\"foot\">A részletes, futónkénti bontás a Futók fülön található.</p>
+    </section>
+  </section>
+
+  <section class=\"tab-page\" id=\"tab-switches\" data-tab-page=\"switches\">
+    <section class=\"panel\">
+      <h2>Autós Váltási Lista</h2>
+      <p class=\"sub\">A váltások blokkhatáron történnek. A \"Hely\" a következő futó rajtpontja.</p>
+      <div class=\"switch-grid\">{''.join(switch_cards)}</div>
+    </section>
+  </section>
+
+  <section class=\"tab-page\" id=\"tab-runners\" data-tab-page=\"runners\">
+    <section class=\"panel\">
+      <h2>Futók Gyors Elérése</h2>
+      <div class=\"runner-nav\">{''.join(runner_nav)}</div>
+    </section>
+    {''.join(runner_sections)}
   </section>
 
   <section class=\"panel\">
-    <h2>Futók Gyors Elérése</h2>
-    <div class=\"runner-nav\">{''.join(runner_nav)}</div>
-  </section>
-
-  <section class=\"panel\">
-    <h2>Autós Váltási Lista</h2>
-    <p class=\"sub\">A váltások blokkhatáron történnek. A \"Hely\" oszlop a következő futó rajtpontja.</p>
-    <div class=\"switch-grid\">{''.join(switch_cards)}</div>
-  </section>
-
-  <section class=\"panel\">
-    <h2>Éjszakai Szakaszok</h2>
-    <div class=\"night-grid\">{''.join(night_cards) if night_cards else "<div class='foot'>Nincs éjszakai szakasz jelölve.</div>"}</div>
-  </section>
-
-  {''.join(runner_sections)}
-
-  <section class=\"panel\">
-    <div class=\"foot\">Tipp: mobilon a futónevekre koppintva gyorsan a saját szakaszlistára ugorhatsz.</div>
+    <div class=\"foot\">Tipp: a tabokkal lépdelve külön nézetben látod a futókat és a váltásokat.</div>
     <div class=\"foot\">Koordináta forrás: UB hivatalos szakaszoldal.</div>
   </section>
 </main>
+
+<div class=\"mobile-tabs\" aria-hidden=\"false\">
+  <nav class=\"tab-nav\" aria-label=\"Mobil oldalfülek\">
+    <button type=\"button\" class=\"tab-btn is-active\" data-tab=\"overview\">Áttekintés</button>
+    <button type=\"button\" class=\"tab-btn\" data-tab=\"switches\">Váltások</button>
+    <button type=\"button\" class=\"tab-btn\" data-tab=\"runners\">Futók</button>
+  </nav>
+</div>
+
+<script>
+  (function() {{
+    const pages = Array.from(document.querySelectorAll('[data-tab-page]'));
+    const buttons = Array.from(document.querySelectorAll('.tab-btn[data-tab]'));
+
+    function activate(tabId, updateHash) {{
+      pages.forEach((el) => {{
+        const on = el.getAttribute('data-tab-page') === tabId;
+        el.classList.toggle('is-active', on);
+      }});
+      buttons.forEach((btn) => {{
+        const on = btn.getAttribute('data-tab') === tabId;
+        btn.classList.toggle('is-active', on);
+      }});
+      if (updateHash) {{
+        history.replaceState(null, '', '#tab-' + tabId);
+      }}
+      window.scrollTo({{ top: 0, behavior: 'smooth' }});
+    }}
+
+    buttons.forEach((btn) => {{
+      btn.addEventListener('click', () => activate(btn.getAttribute('data-tab'), true));
+    }});
+
+    document.querySelectorAll('[data-open-tab=\"runners\"]').forEach((a) => {{
+      a.addEventListener('click', (ev) => {{
+        const href = a.getAttribute('href') || '';
+        if (!href.startsWith('#runner-')) {{
+          return;
+        }}
+        ev.preventDefault();
+        activate('runners', false);
+        const target = document.querySelector(href);
+        if (target) {{
+          setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
+        }}
+      }});
+    }});
+
+    const hash = window.location.hash || '';
+    if (hash.startsWith('#tab-')) {{
+      const tab = hash.replace('#tab-', '');
+      if (['overview', 'switches', 'runners'].includes(tab)) {{
+        activate(tab, false);
+      }}
+    }} else if (hash.startsWith('#runner-')) {{
+      activate('runners', false);
+      const target = document.querySelector(hash);
+      if (target) {{
+        setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
+      }}
+    }}
+  }})();
+</script>
 </body>
 </html>
 """
@@ -795,6 +1177,11 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
         default="data/stage_metadata.json",
         help="Optional stage metadata JSON with coordinates",
     )
+    parser.add_argument(
+        "--runner-meta",
+        default="data/runner_plan_input.json",
+        help="Optional optimizer input JSON to colorize runners by car_id",
+    )
     args = parser.parse_args(argv)
 
     race_date = datetime.strptime(args.race_date, "%Y-%m-%d").date()
@@ -806,6 +1193,7 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
     else:
         start_t = datetime.strptime("12:15:00", "%H:%M:%S").time()
     stage_meta = _load_stage_metadata(Path(args.stage_meta))
+    runner_car_map = _load_runner_car_map(Path(args.runner_meta))
     report = _report_from_final_csv(final_data, race_date=race_date, race_start_time=start_t)
     output_html = _render_html(
         report,
@@ -813,6 +1201,7 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
         args.team_name,
         final_csv_snapshot=final_data,
         stage_meta=stage_meta,
+        runner_car_map=runner_car_map,
     )
 
     out = Path(args.output)
