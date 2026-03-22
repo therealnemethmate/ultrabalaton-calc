@@ -86,13 +86,12 @@ python optimizer.py --input data/runner_plan_input.json --output result.json --p
 
 ## Build Static HTML Report
 
-The publishing flow uses persistent `final.csv` input (`final-only`):
+The publishing flow uses persistent `final.csv` input:
 
 ### Final-only mode (recommended)
 
 ```bash
 python build_static_html.py \
-  --final-only \
   --final-csv data/final.csv \
   --output docs/index.html \
   --title "UB26 Futóbeosztás" \

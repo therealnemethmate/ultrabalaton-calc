@@ -39,7 +39,6 @@ jobs:
       - name: Build static HTML from final.csv
         run: |
           python build_static_html.py \
-            --final-only \
             --final-csv data/final.csv \
             --output docs/index.html \
             --title "UB26 Futóbeosztás" \

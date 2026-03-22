@@ -1,36 +1,20 @@
 #!/usr/bin/env python3
-"""Build static HTML reports for UB planning.
-
-Modes:
-- Full mode: use optimizer input+result+Kalk.html timings.
-- Final-only mode: use only final.csv exported table.
-"""
+"""Build static HTML report for UB planning from final.csv."""
 
 from __future__ import annotations
 
 import argparse
 import csv
 import html
-import json
 import re
 from collections import defaultdict
-from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-import pandas as pd
+from typing import Any, Dict, List, Optional
 
 
 class ReportError(ValueError):
     pass
-
-
-@dataclass(frozen=True)
-class SegmentMeta:
-    km: float
-    stage_from: str
-    stage_to: str
 
 
 def _clean(value: Any) -> str:
@@ -89,66 +73,6 @@ def _format_duration(minutes: float) -> str:
     h = total // 60
     m = total % 60
     return f"{h:02d}:{m:02d}"
-
-
-def _read_json(path: Path) -> Dict[str, Any]:
-    with path.open("r", encoding="utf-8") as f:
-        payload = json.load(f)
-    if not isinstance(payload, dict):
-        raise ReportError(f"JSON root must be object: {path}")
-    return payload
-
-
-def _parse_kalk(kalk_path: Path) -> Tuple[Dict[int, SegmentMeta], Dict[str, float], time]:
-    try:
-        df = pd.read_html(str(kalk_path), flavor="lxml")[0]
-    except Exception as exc:  # pragma: no cover
-        raise ReportError(f"Failed to parse Kalk.html: {exc}") from exc
-
-    segment_meta: Dict[int, SegmentMeta] = {}
-    for _, row in df.iterrows():
-        seg_raw = _clean(row.get("G"))
-        if not seg_raw.isdigit():
-            continue
-        seg_id = int(seg_raw)
-        if not (1 <= seg_id <= 56):
-            continue
-        km = _decode_km(row.get("H"))
-        if km is None:
-            continue
-        segment_meta[seg_id] = SegmentMeta(
-            km=km,
-            stage_from=_clean(row.get("I")),
-            stage_to=_clean(row.get("J")),
-        )
-
-    pace_by_runner: Dict[str, float] = {}
-    for _, row in df.iterrows():
-        name = _clean(row.get("C"))
-        pace_raw = _clean(row.get("D"))
-        if not name or name == "CSAPATTAG":
-            continue
-        if re.fullmatch(r"\d+:\d{2}", pace_raw):
-            pace_by_runner[name] = _pace_to_min_per_km(pace_raw)
-
-    start_time: Optional[time] = None
-    for _, row in df.iterrows():
-        marker = _clean(row.get("C"))
-        raw = _clean(row.get("D"))
-        if "Válassz rajtidőpontot" in marker and raw:
-            try:
-                start_time = datetime.strptime(raw, "%H:%M:%S").time()
-                break
-            except ValueError:
-                pass
-    if start_time is None:
-        start_time = datetime.strptime("12:15:00", "%H:%M:%S").time()
-
-    if not segment_meta:
-        raise ReportError("No segment metadata found in Kalk.html.")
-    if not pace_by_runner:
-        raise ReportError("No runner pace rows found in Kalk.html.")
-    return segment_meta, pace_by_runner, start_time
 
 
 def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
@@ -294,131 +218,6 @@ def _make_blocks(segment_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             cur["end_seg"] = row["seg_id"]
     blocks.append(cur)
     return blocks
-
-
-def _report_from_full(
-    input_data: Dict[str, Any],
-    result_data: Dict[str, Any],
-    kalk_segments: Dict[int, SegmentMeta],
-    pace_by_runner: Dict[str, float],
-    race_date: date,
-    race_start_time: time,
-    sunset_day1: str,
-    sunrise_day2: str,
-    sunset_day2: str,
-    sunrise_day3: str,
-) -> Dict[str, Any]:
-    if result_data.get("status") not in {"OPTIMAL", "FEASIBLE"}:
-        msg = result_data.get("message", "No feasible solution.")
-        raise ReportError(f"Result is not feasible: {msg}")
-
-    seg_km_from_input = {
-        int(item["id"]): float(item["km"])
-        for item in input_data.get("segments", [])
-        if isinstance(item, dict) and "id" in item and "km" in item
-    }
-    owner = {int(k): str(v) for k, v in result_data.get("segment_owner", {}).items()}
-    if not owner:
-        raise ReportError("Result has empty segment_owner.")
-
-    def dt(hhmm: str, add_days: int = 0) -> datetime:
-        t = datetime.strptime(hhmm, "%H:%M").time()
-        return datetime.combine(race_date + timedelta(days=add_days), t)
-
-    dark_windows = [
-        (dt(sunset_day1, 0), dt(sunrise_day2, 1)),
-        (dt(sunset_day2, 1), dt(sunrise_day3, 2)),
-    ]
-
-    def overlap(a0: datetime, a1: datetime, b0: datetime, b1: datetime) -> float:
-        lo = max(a0, b0)
-        hi = min(a1, b1)
-        if hi <= lo:
-            return 0.0
-        return (hi - lo).total_seconds() / 60.0
-
-    cur = datetime.combine(race_date, race_start_time)
-    segments: List[Dict[str, Any]] = []
-    for seg_id in sorted(owner):
-        runner = owner[seg_id]
-        pace = pace_by_runner.get(runner)
-        if pace is None:
-            raise ReportError(f"Missing pace for runner {runner!r}")
-
-        if seg_id in seg_km_from_input:
-            km = seg_km_from_input[seg_id]
-        else:
-            meta = kalk_segments.get(seg_id)
-            if meta is None:
-                raise ReportError(f"Missing segment {seg_id}")
-            km = meta.km
-
-        meta = kalk_segments.get(seg_id)
-        stage_from = meta.stage_from if meta else f"Seg {seg_id} start"
-        stage_to = meta.stage_to if meta else f"Seg {seg_id} end"
-
-        dur = km * pace
-        s0 = cur
-        s1 = cur + timedelta(minutes=dur)
-        dark_min = sum(overlap(s0, s1, d0, d1) for d0, d1 in dark_windows)
-        segments.append({
-            "seg_id": seg_id,
-            "runner": runner,
-            "km": km,
-            "pace": pace,
-            "stage_from": stage_from,
-            "stage_to": stage_to,
-            "start": s0,
-            "end": s1,
-            "duration_min": dur,
-            "dark_min": dark_min,
-        })
-        cur = s1
-
-    blocks = _make_blocks(segments)
-
-    totals: Dict[str, Dict[str, float]] = defaultdict(lambda: {"km": 0.0, "dur": 0.0, "dark": 0.0, "blocks": 0.0})
-    for b in blocks:
-        t = totals[b["runner"]]
-        t["km"] += b["km"]
-        t["dur"] += b["duration_min"]
-        t["dark"] += b["dark_min"]
-        t["blocks"] += 1
-
-    runners: List[Dict[str, Any]] = []
-    for rr in result_data.get("runners", []):
-        if not isinstance(rr, dict) or not isinstance(rr.get("name"), str):
-            continue
-        name = rr["name"]
-        t = totals[name]
-        dark_pct = 0.0 if t["dur"] <= 0 else 100.0 * t["dark"] / t["dur"]
-        runners.append({
-            "name": name,
-            "car_id": rr.get("car_id"),
-            "target_km": float(rr.get("target_km", 0.0)),
-            "assigned_km": float(rr.get("assigned_km", t["km"])),
-            "overflow_km": float(rr.get("overflow_km", 0.0)),
-            "underfill_km": float(rr.get("underfill_km", 0.0)),
-            "first_block_ratio": rr.get("first_block_ratio"),
-            "rest_gap_segments": rr.get("rest_gap_segments"),
-            "block_count": int(rr.get("block_count", int(t["blocks"]))),
-            "duration_min": t["dur"],
-            "dark_min": t["dark"],
-            "dark_pct": dark_pct,
-        })
-    runners.sort(key=lambda x: (x["dark_min"] == 0, -x["dark_min"], x["name"]))
-
-    return {
-        "mode": "full",
-        "status": result_data.get("status"),
-        "objective": result_data.get("objective"),
-        "start_dt": datetime.combine(race_date, race_start_time),
-        "finish_dt": cur,
-        "duration_min": (cur - datetime.combine(race_date, race_start_time)).total_seconds() / 60.0,
-        "runner_rows": runners,
-        "blocks": blocks,
-        "segments": segments,
-    }
 
 
 def _report_from_final_csv(final_csv_data: Dict[str, Any], race_date: date, race_start_time: time) -> Dict[str, Any]:
@@ -798,12 +597,8 @@ def _render_html(
 
 
 def run_cli(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Build static UB HTML report.")
-    parser.add_argument("--kalk-html", default="", help="Path to Kalk.html")
-    parser.add_argument("--input", default="", help="Optimizer input JSON path")
-    parser.add_argument("--result", default="", help="Optimizer result JSON path")
-    parser.add_argument("--final-csv", default="", help="Optional final.csv path")
-    parser.add_argument("--final-only", action="store_true", help="Build report from final.csv only")
+    parser = argparse.ArgumentParser(description="Build static UB HTML report from final.csv.")
+    parser.add_argument("--final-csv", required=True, help="Path to final.csv")
     parser.add_argument("--output", required=True, help="Output HTML path")
     parser.add_argument("--title", default="UB Futóbeosztás", help="Report title")
     parser.add_argument("--team-name", default="Csiga Csillagok", help="Team name displayed in report")
@@ -812,42 +607,15 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     race_date = datetime.strptime(args.race_date, "%Y-%m-%d").date()
-
-    if args.final_only or (args.final_csv and (not args.input or not args.result or not args.kalk_html)):
-        if not args.final_csv:
-            raise ReportError("--final-only requires --final-csv")
-        final_data = _parse_final_csv(Path(args.final_csv))
-        if args.race_start:
-            start_t = datetime.strptime(args.race_start, "%H:%M:%S").time()
-        elif final_data.get("start_time") is not None:
-            start_t = final_data["start_time"]
-        else:
-            start_t = datetime.strptime("12:15:00", "%H:%M:%S").time()
-        report = _report_from_final_csv(final_data, race_date=race_date, race_start_time=start_t)
-        output_html = _render_html(report, args.title, args.team_name, final_csv_snapshot=final_data)
+    final_data = _parse_final_csv(Path(args.final_csv))
+    if args.race_start:
+        start_t = datetime.strptime(args.race_start, "%H:%M:%S").time()
+    elif final_data.get("start_time") is not None:
+        start_t = final_data["start_time"]
     else:
-        if not (args.kalk_html and args.input and args.result):
-            raise ReportError("Full mode requires --kalk-html --input --result")
-
-        input_data = _read_json(Path(args.input))
-        result_data = _read_json(Path(args.result))
-        kalk_segments, pace_by_runner, kalk_start_time = _parse_kalk(Path(args.kalk_html))
-        start_t = datetime.strptime(args.race_start, "%H:%M:%S").time() if args.race_start else kalk_start_time
-
-        report = _report_from_full(
-            input_data=input_data,
-            result_data=result_data,
-            kalk_segments=kalk_segments,
-            pace_by_runner=pace_by_runner,
-            race_date=race_date,
-            race_start_time=start_t,
-            sunset_day1="19:50",
-            sunrise_day2="05:42",
-            sunset_day2="19:52",
-            sunrise_day3="05:40",
-        )
-        final_snapshot = _parse_final_csv(Path(args.final_csv)) if args.final_csv else None
-        output_html = _render_html(report, args.title, args.team_name, final_csv_snapshot=final_snapshot)
+        start_t = datetime.strptime("12:15:00", "%H:%M:%S").time()
+    report = _report_from_final_csv(final_data, race_date=race_date, race_start_time=start_t)
+    output_html = _render_html(report, args.title, args.team_name, final_csv_snapshot=final_data)
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
