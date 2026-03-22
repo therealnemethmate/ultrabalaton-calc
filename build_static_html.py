@@ -565,6 +565,93 @@ def _render_html(
             "</section>"
         )
 
+    escort_anchor_by_name: Dict[str, str] = {}
+    escort_nav: List[str] = []
+    escort_sections: List[str] = []
+    missing_escort_key = "__none__"
+    segments_by_escort: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    escort_first_seg: Dict[str, int] = {}
+
+    for s in segments_sorted:
+        escort_key = _clean(s.get("biker", "")) or missing_escort_key
+        segments_by_escort[escort_key].append(s)
+        if escort_key not in escort_first_seg:
+            escort_first_seg[escort_key] = int(s["seg_id"])
+
+    escort_order = [
+        name
+        for name, _ in sorted(
+            escort_first_seg.items(),
+            key=lambda kv: (kv[0] == missing_escort_key, kv[1]),
+        )
+    ]
+
+    for idx, escort_key in enumerate(escort_order, start=1):
+        display_name = "Nincs kijelölve" if escort_key == missing_escort_key else escort_key
+        anchor = f"escort-{idx}"
+        escort_anchor_by_name[escort_key] = anchor
+        escort_nav.append(
+            f"<a class='runner-pill' href='#{anchor}' data-open-tab='escorts'>{html.escape(display_name)}</a>"
+        )
+
+        e_segments = segments_by_escort.get(escort_key, [])
+        total_km = sum(float(s.get("km", 0.0)) for s in e_segments)
+        dark_km = sum(float(s.get("km", 0.0)) for s in e_segments if "🌙" in _clean(s.get("day", "")))
+        day_km_escort = max(0.0, total_km - dark_km)
+        first_start = e_segments[0]["start"].strftime("%m.%d %H:%M") if e_segments else "-"
+        last_end = e_segments[-1]["end"].strftime("%m.%d %H:%M") if e_segments else "-"
+
+        seg_cards: List[str] = []
+        for s in e_segments:
+            day_raw = _clean(s.get("day", ""))
+            day_label = "Éjszaka" if "🌙" in day_raw else "Nappal"
+            day_icon = "🌙" if "🌙" in day_raw else "☀️"
+            sponsor = _clean(s.get("stage_name", ""))
+            info_text = _clean(s.get("info", "")) or "Nincs külön leírás ehhez a szakaszhoz."
+            tags = _extract_info_tags(info_text)
+            tags_html = "".join(f"<span class='mini-tag'>{html.escape(t)}</span>" for t in tags)
+            runner_name = _clean(s.get("runner", "")) or "n/a"
+            pace_text = _clean(s.get("pace_raw", "")) or _clean(s.get("pace", ""))
+            run_time_text = _clean(s.get("run_time", "")) or _format_duration(float(s.get("duration_min", 0.0)))
+            sponsor_html = f"<div class='seg-sponsor'>{html.escape(sponsor)}</div>" if sponsor else ""
+            tag_row_html = f"<div class='tag-row'>{tags_html}</div>" if tags_html else ""
+            coord_html = _coord_links(_coord_for_seg(int(s["seg_id"])))
+            seg_cards.append(
+                "<article class='seg-card'>"
+                "<div class='seg-top'>"
+                f"<div class='seg-id'>Szakasz {int(s['seg_id'])}</div>"
+                f"<div class='seg-km'>{float(s.get('km', 0.0)):.1f} km</div>"
+                "</div>"
+                f"<div class='seg-route'>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</div>"
+                f"<div class='seg-time'>{s['start'].strftime('%m.%d %H:%M')} - {s['end'].strftime('%m.%d %H:%M')}</div>"
+                "<div class='seg-meta'>"
+                f"<span>{day_icon} {day_label}</span>"
+                f"<span>Futó: {html.escape(runner_name)}</span>"
+                f"<span>Tempó: {html.escape(str(pace_text))}</span>"
+                f"<span>Idő: {html.escape(str(run_time_text))}</span>"
+                "</div>"
+                f"{sponsor_html}"
+                f"{tag_row_html}"
+                f"{coord_html}"
+                f"<p class='seg-info'>{html.escape(info_text)}</p>"
+                "</article>"
+            )
+
+        escort_sections.append(
+            f"<section class='panel runner-panel' id='{anchor}'>"
+            f"<h2>{html.escape(display_name)}</h2>"
+            "<div class='runner-kpis'>"
+            f"<span class='kpi'>Szakasz: {len(e_segments)}</span>"
+            f"<span class='kpi'>Összesen: {total_km:.1f} km</span>"
+            f"<span class='kpi'>Nappal: {day_km_escort:.1f} km</span>"
+            f"<span class='kpi'>Éjszaka: {dark_km:.1f} km</span>"
+            f"<span class='kpi'>Első indulás: {first_start}</span>"
+            f"<span class='kpi'>Utolsó érkezés: {last_end}</span>"
+            "</div>"
+            f"<div class='seg-list'>{''.join(seg_cards)}</div>"
+            "</section>"
+        )
+
     cumulative_end_km: Dict[int, float] = {}
     cumulative = 0.0
     for s in segments_sorted:
@@ -1039,6 +1126,7 @@ def _render_html(
     <nav class=\"tab-nav top\" aria-label=\"Oldalfülek\">
       <button type=\"button\" class=\"tab-btn is-active\" data-tab=\"overview\">Áttekintés</button>
       <button type=\"button\" class=\"tab-btn\" data-tab=\"switches\">Váltások</button>
+      <button type=\"button\" class=\"tab-btn\" data-tab=\"escorts\">Kísérők</button>
       <button type=\"button\" class=\"tab-btn\" data-tab=\"runners\">Futók</button>
     </nav>
   </section>
@@ -1086,6 +1174,14 @@ def _render_html(
     </section>
   </section>
 
+  <section class=\"tab-page\" id=\"tab-escorts\" data-tab-page=\"escorts\">
+    <section class=\"panel\">
+      <h2>Kísérők Gyors Elérése</h2>
+      <div class=\"runner-nav\">{''.join(escort_nav)}</div>
+    </section>
+    {''.join(escort_sections)}
+  </section>
+
   <section class=\"tab-page\" id=\"tab-runners\" data-tab-page=\"runners\">
     <section class=\"panel\">
       <h2>Futók Gyors Elérése</h2>
@@ -1104,6 +1200,7 @@ def _render_html(
   <nav class=\"tab-nav\" aria-label=\"Mobil oldalfülek\">
     <button type=\"button\" class=\"tab-btn is-active\" data-tab=\"overview\">Áttekintés</button>
     <button type=\"button\" class=\"tab-btn\" data-tab=\"switches\">Váltások</button>
+    <button type=\"button\" class=\"tab-btn\" data-tab=\"escorts\">Kísérők</button>
     <button type=\"button\" class=\"tab-btn\" data-tab=\"runners\">Futók</button>
   </nav>
 </div>
@@ -1147,14 +1244,35 @@ def _render_html(
       }});
     }});
 
+    document.querySelectorAll('[data-open-tab=\"escorts\"]').forEach((a) => {{
+      a.addEventListener('click', (ev) => {{
+        const href = a.getAttribute('href') || '';
+        if (!href.startsWith('#escort-')) {{
+          return;
+        }}
+        ev.preventDefault();
+        activate('escorts', false);
+        const target = document.querySelector(href);
+        if (target) {{
+          setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
+        }}
+      }});
+    }});
+
     const hash = window.location.hash || '';
     if (hash.startsWith('#tab-')) {{
       const tab = hash.replace('#tab-', '');
-      if (['overview', 'switches', 'runners'].includes(tab)) {{
+      if (['overview', 'switches', 'escorts', 'runners'].includes(tab)) {{
         activate(tab, false);
       }}
     }} else if (hash.startsWith('#runner-')) {{
       activate('runners', false);
+      const target = document.querySelector(hash);
+      if (target) {{
+        setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
+      }}
+    }} else if (hash.startsWith('#escort-')) {{
+      activate('escorts', false);
       const target = document.querySelector(hash);
       if (target) {{
         setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
