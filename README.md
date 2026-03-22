@@ -116,9 +116,9 @@ Kerékpáros kísérőket post-process lépésben tudsz kiosztani a `final.csv`-
 Minta konfiguráció:
 - `data/bike_escorts.sample.json`
 - Fix kivétel (beégetett aktuális terv): `data/bike_escorts.json`
-  - `Brigi`: 1-18 (`day_only=true`)
-  - `Máté`: 18-28
-  - `Lajek`: 28-44
+  - `Brigi`: 1-19 (`day_only=true`)
+  - `Máté`: 19-29
+  - `Lajek`: 29-46
 
 Futtatás:
 

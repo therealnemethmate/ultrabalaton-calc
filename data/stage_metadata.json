@@ -1,0 +1,411 @@
+{
+  "source_url": "https://ultrabalaton.hu/nnultrabalaton/7-13-fos-csapatverseny-szakaszok/",
+  "stages": [
+    {
+      "seg_id": 1,
+      "title": "Rajt - Aszófő",
+      "lat": 46.922545,
+      "lon": 17.825171,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B055'21.2%22N+17%C2%B049'30.6%22E/@46.9225486,17.8225961,17z/data=!3m1!4b1!4m4!3m3!8m2!3d46.922545!4d17.825171?entry=ttu"
+    },
+    {
+      "seg_id": 2,
+      "title": "Aszófő - Fövenyes",
+      "lat": 46.89476,
+      "lon": 17.789522,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B053'41.1%22N+17%C2%B047'22.3%22E/@46.89476,17.7873333,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.89476!4d17.789522"
+    },
+    {
+      "seg_id": 3,
+      "title": "Fövenyes - Balatonakali",
+      "lat": 46.881709,
+      "lon": 17.754247,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B052'54.2%22N+17%C2%B045'15.3%22E/@46.881709,17.7520583,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.881709!4d17.754247"
+    },
+    {
+      "seg_id": 4,
+      "title": "Balatonakali - Zánka Erszébet-tábor",
+      "lat": 46.880952,
+      "lon": 17.710369,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B052'51.4%22N+17%C2%B042'37.3%22E/@46.8809556,17.7081803,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x4edf40b82c73c6af!8m2!3d46.880952!4d17.710369"
+    },
+    {
+      "seg_id": 5,
+      "title": "Zánka Erzsébet-tábor - Zánka",
+      "lat": 46.870634,
+      "lon": 17.686058,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B052'14.3%22N+17%C2%B041'09.8%22E/@46.870634,17.6838693,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x607a866ed3e7d777!8m2!3d46.870634!4d17.686058"
+    },
+    {
+      "seg_id": 6,
+      "title": "Zánka - Balatonszepezd",
+      "lat": 46.849827,
+      "lon": 17.659442,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B050'59.4%22N+17%C2%B039'34.0%22E/@46.849827,17.6583477,18z/data=!3m1!4b1!4m5!3m4!1s0x0:0xcd5bccc5b1e6a538!8m2!3d46.849827!4d17.659442"
+    },
+    {
+      "seg_id": 7,
+      "title": "Balatonszepezd - Révfülöp kelet",
+      "lat": 46.829472,
+      "lon": 17.638454,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B049'46.1%22N+17%C2%B038'18.4%22E/@46.829472,17.6362653,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.829472!4d17.638454"
+    },
+    {
+      "seg_id": 8,
+      "title": "Révfülöp kelet - Révfülöp nyugat",
+      "lat": 46.823165,
+      "lon": 17.618855,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B049'23.4%22N+17%C2%B037'07.9%22E/@46.823165,17.6181843,18z/data=!3m1!4b1!4m5!3m4!1s0x0:0x6dd041f15de75842!8m2!3d46.823165!4d17.618855"
+    },
+    {
+      "seg_id": 9,
+      "title": "Révfülöp nyugat - Ábrahámhegy",
+      "lat": 46.813868,
+      "lon": 17.571131,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B048'49.9%22N+17%C2%B034'16.1%22E/@46.813868,17.5703759,18z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.813868!4d17.571131"
+    },
+    {
+      "seg_id": 10,
+      "title": "Ábrahámhegy - Badacsonyörs",
+      "lat": 46.805807,
+      "lon": 17.536129,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B048'20.9%22N+17%C2%B032'10.1%22E/@46.805807,17.5339403,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.805807!4d17.536129"
+    },
+    {
+      "seg_id": 11,
+      "title": "Badacsonyörs - Badacsony",
+      "lat": 46.78847,
+      "lon": 17.499855,
+      "google_maps_url": "https://www.google.com/maps/@46.7888552,17.4965139,16.95z?entry=ttu"
+    },
+    {
+      "seg_id": 12,
+      "title": "Badacsony - Badacsonytördemic",
+      "lat": 46.807795,
+      "lon": 17.465712,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B048'28.1%22N+17%C2%B027'56.6%22E/@46.807795,17.4635233,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.807795!4d17.465712"
+    },
+    {
+      "seg_id": 13,
+      "title": "Badacsonytördemic - Szigliget",
+      "lat": 46.807566,
+      "lon": 17.433383,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B048'27.2%22N+17%C2%B026'00.2%22E/@46.8075697,17.4311943,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.807566!4d17.433383"
+    },
+    {
+      "seg_id": 14,
+      "title": "Szigliget - Balatonederics",
+      "lat": 46.770748,
+      "lon": 17.363017,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B046'14.7%22N+17%C2%B021'46.9%22E/@46.770748,17.3608283,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.770748!4d17.363017"
+    },
+    {
+      "seg_id": 15,
+      "title": "Balatonederics - Balatongyörök kelet",
+      "lat": 46.770748,
+      "lon": 17.363017,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B046'14.7%22N+17%C2%B021'46.9%22E/@46.770748,17.3608283,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.770748!4d17.363017"
+    },
+    {
+      "seg_id": 16,
+      "title": "Balatongyörök kelet - Balatongyörök nyugat",
+      "lat": 46.749808,
+      "lon": 17.351301,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B044'59.3%22N+17%C2%B021'04.7%22E/@46.749808,17.3491123,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.749808!4d17.351301"
+    },
+    {
+      "seg_id": 17,
+      "title": "Balatongyörök nyugat - Vonyarcvashegy kelet",
+      "lat": 46.754723,
+      "lon": 17.311795,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B045'17.0%22N+17%C2%B018'42.5%22E/@46.754723,17.3096063,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.754723!4d17.311795"
+    },
+    {
+      "seg_id": 18,
+      "title": "Vonyarcvashegy kelet - Gyenesdiás",
+      "lat": 46.76304,
+      "lon": 17.290668,
+      "google_maps_url": "https://www.google.com/search?q=46.763040%2C+17.290668&amp;oq=46.763040%2C+17.290668&amp;gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBBzU5MGowajeoAgCwAgA&amp;sourceid=chrome&amp;ie=UTF-8"
+    },
+    {
+      "seg_id": 19,
+      "title": "Gyenesdiás - Keszthely kelet",
+      "lat": 46.766332,
+      "lon": 17.269674,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B045'58.8%22N+17%C2%B016'10.8%22E/@46.766332,17.2674853,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x7a1d9fa6641119f!8m2!3d46.766332!4d17.269674"
+    },
+    {
+      "seg_id": 20,
+      "title": "Keszthely kelet - Keszthely nyugat",
+      "lat": 46.750992,
+      "lon": 17.245619,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B045'03.6%22N+17%C2%B014'44.2%22E/@46.750992,17.2434303,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x68088af1b44f3b15!8m2!3d46.750992!4d17.245619"
+    },
+    {
+      "seg_id": 21,
+      "title": "Keszthely nyugat- Fenékpuszta",
+      "lat": 46.711031,
+      "lon": 17.246758,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B042'39.7%22N+17%C2%B014'48.3%22E/@46.711031,17.2445693,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.711031!4d17.246758"
+    },
+    {
+      "seg_id": 22,
+      "title": "Fenékpuszta- Balatonberény nyugat",
+      "lat": 46.705724,
+      "lon": 17.289725,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B042'20.6%22N+17%C2%B017'23.0%22E/@46.705724,17.2875363,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.705724!4d17.289725"
+    },
+    {
+      "seg_id": 23,
+      "title": "Balatonberény nyugat- Balatonberény kelet",
+      "lat": 46.714315,
+      "lon": 17.322966,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B042'51.5%22N+17%C2%B019'22.7%22E/@46.714315,17.3207773,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.714315!4d17.322966"
+    },
+    {
+      "seg_id": 24,
+      "title": "Balatonberény kelet - Balatonmáriafürdő nyugat",
+      "lat": 46.706872,
+      "lon": 17.370829,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B042'24.7%22N+17%C2%B022'15.0%22E/@46.7068731,17.3701557,269m/data=!3m2!1e3!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.706872!4d17.370829"
+    },
+    {
+      "seg_id": 25,
+      "title": "Balatonmáriafürdő nyugat - Balatonmáriafürdő kelet",
+      "lat": 46.705592,
+      "lon": 17.434778,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B042'22.3%22N+17%C2%B026'05.9%22E/@46.7061866,17.4323961,17z/data=!3m1!4b1!4m4!3m3!8m2!3d46.706183!4d17.434971?entry=ttu"
+    },
+    {
+      "seg_id": 26,
+      "title": "Balatonmáriafürdő kelet - Balatonfenyves nyugat",
+      "lat": 46.708685,
+      "lon": 17.454778,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B042'31.3%22N+17%C2%B027'17.2%22E/@46.708685,17.4525893,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.708685!4d17.454778"
+    },
+    {
+      "seg_id": 27,
+      "title": "Balatonfenyves nyugat - Balatonfenyves kelet",
+      "lat": 46.712872,
+      "lon": 17.476345,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B042'46.3%22N+17%C2%B028'34.8%22E/@46.712872,17.4741563,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.712872!4d17.476345"
+    },
+    {
+      "seg_id": 28,
+      "title": "Balatonfenyves kelet - Alsóbélatelep",
+      "lat": 46.730021,
+      "lon": 17.528842,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B043'48.1%22N+17%C2%B031'43.8%22E/@46.730021,17.5266533,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.730021!4d17.528842"
+    },
+    {
+      "seg_id": 29,
+      "title": "Alsóbélatelep - Fonyód NN BIZTOSÍTÓ",
+      "lat": 46.749985,
+      "lon": 17.556417,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B044'60.0%22N+17%C2%B033'23.1%22E/@46.749985,17.5542283,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.749985!4d17.556417"
+    },
+    {
+      "seg_id": 30,
+      "title": "Fonyód - Fonyódliget",
+      "lat": 46.759594,
+      "lon": 17.592703,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B045'34.5%22N+17%C2%B035'33.7%22E/@46.759594,17.5905143,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.759594!4d17.592703"
+    },
+    {
+      "seg_id": 31,
+      "title": "Fonyódliget - Balatonboglár nyugat",
+      "lat": 46.779841,
+      "lon": 17.650214,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B046'47.4%22N+17%C2%B039'00.8%22E/@46.779841,17.6480253,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.779841!4d17.650214"
+    },
+    {
+      "seg_id": 32,
+      "title": "Balatonboglár nyugat - Balatonboglár kelet",
+      "lat": 46.781836,
+      "lon": 17.658964,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B046'54.6%22N+17%C2%B039'32.3%22E/@46.7818396,17.6563891,17z/data=!3m1!4b1!4m4!3m3!8m2!3d46.781836!4d17.658964?entry=ttu"
+    },
+    {
+      "seg_id": 33,
+      "title": "Balatonboglár kelet - Balatonlelle nyugat",
+      "lat": 46.789924,
+      "lon": 17.696347,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B047'23.7%22N+17%C2%B041'46.9%22E/@46.789909,17.6941693,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.789909!4d17.696358"
+    },
+    {
+      "seg_id": 34,
+      "title": "Balatonlelle nyugat - Balatonlelle kelet",
+      "lat": 46.794618,
+      "lon": 17.719209,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B047'40.6%22N+17%C2%B043'09.2%22E/@46.794618,17.7170203,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.794618!4d17.719209"
+    },
+    {
+      "seg_id": 35,
+      "title": "Balatonlelle kelet - Balatonszemes",
+      "lat": 46.811094,
+      "lon": 17.775858,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B048'39.9%22N+17%C2%B046'33.1%22E/@46.811094,17.7736693,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.811094!4d17.775858"
+    },
+    {
+      "seg_id": 36,
+      "title": "Balatonszemes - Balatonőszöd",
+      "lat": 46.821159,
+      "lon": 17.795912,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B049'16.2%22N+17%C2%B047'45.3%22E/@46.8211626,17.7933371,17z/data=!3m1!4b1!4m4!3m3!8m2!3d46.821159!4d17.795912?entry=ttu&amp;g_ep=EgoyMDI2MDIyNC4wIKXMDSoASAFQAw%3D%3D"
+    },
+    {
+      "seg_id": 37,
+      "title": "Balatonőszöd - Balatonszárszó",
+      "lat": 46.831821,
+      "lon": 17.82829,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B049'54.6%22N+17%C2%B049'41.8%22E/@46.831821,17.8261013,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.831821!4d17.82829"
+    },
+    {
+      "seg_id": 38,
+      "title": "Balatonszárszó - Balatonföldvár nyugat",
+      "lat": 46.847694,
+      "lon": 17.86689,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B050'51.7%22N+17%C2%B052'00.8%22E/@46.8476976,17.8643151,17z/data=!3m1!4b1!4m4!3m3!8m2!3d46.847694!4d17.86689?entry=ttu"
+    },
+    {
+      "seg_id": 39,
+      "title": "Balatonföldvár nyugat - Balatonföldvár kelet",
+      "lat": 46.857885,
+      "lon": 17.889048,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B051'28.4%22N+17%C2%B053'20.6%22E/@46.8578886,17.8864731,17z/data=!3m1!4b1!4m4!3m3!8m2!3d46.857885!4d17.889048?entry=ttu"
+    },
+    {
+      "seg_id": 40,
+      "title": "Balatonföldvár kelet - Szántód",
+      "lat": 46.862067,
+      "lon": 17.903064,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B051'43.4%22N+17%C2%B054'11.0%22E/@46.862067,17.90087,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0xe2e30197ae5fe093!8m2!3d46.862067!4d17.903064"
+    },
+    {
+      "seg_id": 41,
+      "title": "Szántód - Zamárdi",
+      "lat": 46.884596,
+      "lon": 17.929134,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B053'04.6%22N+17%C2%B055'44.9%22E/@46.884596,17.9269453,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.884596!4d17.929134"
+    },
+    {
+      "seg_id": 42,
+      "title": "Zamárdi - Balatonszéplak",
+      "lat": 46.901239,
+      "lon": 18.017036,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B054'04.5%22N+18%C2%B001'01.3%22E/@46.901239,18.0148473,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.901239!4d18.017036"
+    },
+    {
+      "seg_id": 43,
+      "title": "Balatonszéplak - Siófok nyugat",
+      "lat": 46.901239,
+      "lon": 18.017036,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B054'04.5%22N+18%C2%B001'01.3%22E/@46.901239,18.0148473,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.901239!4d18.017036"
+    },
+    {
+      "seg_id": 44,
+      "title": "Siófok nyugat - Siófok Debreceni Egyetem",
+      "lat": 46.910031,
+      "lon": 18.048028,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B054'36.1%22N+18%C2%B002'52.9%22E/@46.9100346,18.0454531,570m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d46.910031!4d18.048028?entry=ttu&amp;g_ep=EgoyMDI0MDkxMC4wIKXMDSoASAFQAw%3D%3D"
+    },
+    {
+      "seg_id": 45,
+      "title": "Siófok Központ - Siófok kelet",
+      "lat": 46.919821,
+      "lon": 18.081021,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B055'11.4%22N+18%C2%B004'51.6%22E/@46.9198333,18.081,142m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d46.9198333!4d18.081?entry=ttu&amp;g_ep=EgoyMDI0MDkxMS4wIKXMDSoASAFQAw%3D%3D"
+    },
+    {
+      "seg_id": 46,
+      "title": "Siófok kelet - Siófok Sóstó",
+      "lat": 46.939584,
+      "lon": 18.128584,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B056'22.5%22N+18%C2%B007'42.9%22E/@46.939584,18.1263953,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.939584!4d18.128584"
+    },
+    {
+      "seg_id": 47,
+      "title": "Siófok Sóstó - Balatonvilágos nyugat",
+      "lat": 46.955417,
+      "lon": 18.149665,
+      "google_maps_url": "https://share.google/a7edOWpzRmLqzaaIS"
+    },
+    {
+      "seg_id": 48,
+      "title": "Balatonvilágos nyugat - Balatonvilágos kelet",
+      "lat": 46.976492,
+      "lon": 18.169036,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B058'35.4%22N+18%C2%B010'08.5%22E/@46.976492,18.1668473,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.976492!4d18.169036"
+    },
+    {
+      "seg_id": 49,
+      "title": "Balatonvilágos kelet - Balatonakarattya",
+      "lat": 47.015498,
+      "lon": 18.166561,
+      "google_maps_url": "https://www.google.com/maps/place/47%C2%B000'55.8%22N+18%C2%B009'59.6%22E/@47.015498,18.1643723,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d47.015498!4d18.166561"
+    },
+    {
+      "seg_id": 50,
+      "title": "Balatonakarattya - Balatonkenese",
+      "lat": 47.032495,
+      "lon": 18.114859,
+      "google_maps_url": "https://www.google.com/maps/place/47%C2%B001'57.0%22N+18%C2%B006'53.5%22E/@47.032495,18.1126703,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d47.032495!4d18.114859"
+    },
+    {
+      "seg_id": 51,
+      "title": "Balatonkenese - Balatonfűzfő",
+      "lat": 47.055689,
+      "lon": 18.030932,
+      "google_maps_url": "https://www.google.com/maps/place/47%C2%B003'20.5%22N+18%C2%B001'51.4%22E/@47.055689,18.0287433,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0xefa0fe5ff9cc6716!8m2!3d47.055689!4d18.030932"
+    },
+    {
+      "seg_id": 52,
+      "title": "Balatonfűzfő - Tobruk",
+      "lat": 47.055689,
+      "lon": 18.030932,
+      "google_maps_url": "https://www.google.com/maps/place/47%C2%B003'20.5%22N+18%C2%B001'51.4%22E/@47.055689,18.0287433,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0xefa0fe5ff9cc6716!8m2!3d47.055689!4d18.030932"
+    },
+    {
+      "seg_id": 53,
+      "title": "Tobruk - Balatonalmádi kelet",
+      "lat": 47.041019,
+      "lon": 18.019251,
+      "google_maps_url": "https://www.google.com/maps/place/47%C2%B002'27.7%22N+18%C2%B001'09.3%22E/@47.041019,18.0187038,19z/data=!3m1!4b1!4m5!3m4!1s0x0:0x8e0513c47e9b7b3d!8m2!3d47.041019!4d18.019251"
+    },
+    {
+      "seg_id": 54,
+      "title": "Balatonalmádi kelet - Balatonalmádi nyugat",
+      "lat": 47.026394,
+      "lon": 18.012523,
+      "google_maps_url": "https://www.google.com/maps/place/47%C2%B001'35.0%22N+18%C2%B000'45.1%22E/@47.0263949,18.0118793,142m/data=!3m2!1e3!4b1!4m4!3m3!8m2!3d47.026394!4d18.012523?entry=ttu"
+    },
+    {
+      "seg_id": 55,
+      "title": "Balatonalmádi nyugat - Alsóörs",
+      "lat": 46.985194,
+      "lon": 17.977927,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B059'06.7%22N+17%C2%B058'40.5%22E/@46.985194,17.9757383,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.985194!4d17.977927"
+    },
+    {
+      "seg_id": 56,
+      "title": "Alsóörs - Csopak",
+      "lat": 46.969434,
+      "lon": 17.935622,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B058'10.0%22N+17%C2%B056'08.2%22E/@46.969434,17.9334333,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.969434!4d17.935622"
+    },
+    {
+      "seg_id": 57,
+      "title": "Csopak - Balatonfüred kelet",
+      "lat": 46.958279,
+      "lon": 17.911546,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B057'29.8%22N+17%C2%B054'41.6%22E/@46.958279,17.9093573,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.958279!4d17.911546"
+    },
+    {
+      "seg_id": 58,
+      "title": "Balatonfüred kelet - Balatonfüred versenyközpont ANNAGORA AQUAPARK",
+      "lat": 46.948072,
+      "lon": 17.872582,
+      "google_maps_url": "https://www.google.com/maps/place/46%C2%B056'53.1%22N+17%C2%B052'21.3%22E/@46.948072,17.8703933,17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d46.948072!4d17.872582"
+    }
+  ]
+}

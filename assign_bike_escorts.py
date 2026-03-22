@@ -185,7 +185,7 @@ def _parse_final_rows(final_csv: Path) -> Tuple[List[List[str]], List[SegmentRow
         if not seg_raw.isdigit():
             continue
         seg_id = int(seg_raw)
-        if not (1 <= seg_id <= 56):
+        if not (1 <= seg_id <= 200):
             continue
         km = _decode_km(row[km_col] if km_col < len(row) else "")
         if km is None:

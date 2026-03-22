@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import html
+import json
 import re
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
@@ -75,6 +76,65 @@ def _format_duration(minutes: float) -> str:
     return f"{h:02d}:{m:02d}"
 
 
+def _extract_info_tags(info: str) -> List[str]:
+    text = _clean(info).lower()
+    rules = [
+        ("parkoló", "parkolas"),
+        ("vasút", "vasuti atjaro"),
+        ("zebra", "zebra"),
+        ("emelked", "emelkedo"),
+        ("lejt", "lejto"),
+        ("sötét", "sotet szakasz"),
+        ("bringás", "bringas frissites"),
+        ("wc", "wc"),
+        ("mosdó", "mosdo"),
+        ("friss", "frissites"),
+        ("kanyar", "kanyargos"),
+    ]
+    tags: List[str] = []
+    for needle, label in rules:
+        if needle in text and label not in tags:
+            tags.append(label)
+    return tags
+
+
+def _load_stage_metadata(path: Path) -> Dict[int, Dict[str, Any]]:
+    if not path.exists():
+        return {}
+    try:
+        payload = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    try:
+        data = json.loads(payload)
+    except Exception:
+        return {}
+
+    rows = data.get("stages", []) if isinstance(data, dict) else []
+    if not isinstance(rows, list):
+        return {}
+    out: Dict[int, Dict[str, Any]] = {}
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        seg_id = item.get("seg_id")
+        try:
+            sid = int(seg_id)
+        except (TypeError, ValueError):
+            continue
+        lat = _parse_hu_float(item.get("lat"))
+        lon = _parse_hu_float(item.get("lon"))
+        if lat is None or lon is None:
+            continue
+        out[sid] = {
+            "lat": float(lat),
+            "lon": float(lon),
+            "google_maps_url": _clean(item.get("google_maps_url")),
+            "title": _clean(item.get("title")),
+        }
+    return out
+
+
 def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
     rows: List[List[str]] = []
     with final_csv_path.open("r", encoding="utf-8", newline="") as f:
@@ -134,6 +194,8 @@ def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
     run_col = -1
     arr_col = -1
     day_col = -1
+    stage_name_col = -1
+    info_col = -1
 
     for i, row in enumerate(rows):
         for j, cell in enumerate(row):
@@ -157,6 +219,10 @@ def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
                 arr_col = j
             elif c == "Napszak":
                 day_col = j
+            elif c == "SZAKASZ NÉV":
+                stage_name_col = j
+            elif c == "Info":
+                info_col = j
         if header_idx >= 0 and km_col >= 0 and runner_col >= 0:
             break
 
@@ -170,7 +236,7 @@ def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
             if not seg_raw.isdigit():
                 continue
             seg_id = int(seg_raw)
-            if not (1 <= seg_id <= 56):
+            if not (1 <= seg_id <= 200):
                 continue
             km = _decode_km(row[km_col] if km_col < len(row) else "")
             if km is None:
@@ -184,6 +250,8 @@ def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
                 "run_time": _clean(row[run_col]) if run_col < len(row) else "",
                 "arrival": _clean(row[arr_col]) if arr_col < len(row) else "",
                 "day": _clean(row[day_col]) if day_col < len(row) else "",
+                "stage_name": _clean(row[stage_name_col]) if stage_name_col >= 0 and stage_name_col < len(row) else "",
+                "info": _clean(row[info_col]) if info_col >= 0 and info_col < len(row) else "",
                 "stage": (
                     f"{_clean(row[from_col])} -> {_clean(row[to_col])}"
                     if from_col < len(row) and to_col < len(row)
@@ -266,6 +334,8 @@ def _report_from_final_csv(final_csv_data: Dict[str, Any], race_date: date, race
             "day": day,
             "arrival": _clean(s.get("arrival", "")),
             "run_time": _clean(s.get("run_time", "")),
+            "stage_name": _clean(s.get("stage_name", "")),
+            "info": _clean(s.get("info", "")),
         })
         cur = s1
 
@@ -330,180 +400,154 @@ def _render_html(
     title: str,
     team_name: str,
     final_csv_snapshot: Optional[Dict[str, Any]] = None,
+    stage_meta: Optional[Dict[int, Dict[str, Any]]] = None,
 ) -> str:
+    del final_csv_snapshot
+    stage_meta = stage_meta or {}
     status = html.escape(str(report.get("status", "-")))
-    objective = html.escape(str(report.get("objective", "-")))
     start_dt = report["start_dt"].strftime("%Y-%m-%d %H:%M")
     finish_dt = report["finish_dt"].strftime("%Y-%m-%d %H:%M")
     total_duration = _format_duration(float(report.get("duration_min", 0.0)))
-
-    runner_rows_html: List[str] = []
-    for r in report["runner_rows"]:
-        ratio = "-" if r.get("first_block_ratio") is None else f"{100.0 * float(r['first_block_ratio']):.1f}%"
-        rest_gap = "-" if r.get("rest_gap_segments") is None else str(r["rest_gap_segments"])
-        runner_rows_html.append(
-            "<tr>"
-            f"<td>{html.escape(r['name'])}</td>"
-            f"<td>{html.escape(str(r.get('car_id', '-') or '-'))}</td>"
-            f"<td class='num'>{r['target_km']:.1f}</td>"
-            f"<td class='num'>{r['assigned_km']:.1f}</td>"
-            f"<td class='num'>{r['overflow_km']:.1f}</td>"
-            f"<td class='num'>{r['underfill_km']:.1f}</td>"
-            f"<td class='num'>{_format_duration(float(r['duration_min']))}</td>"
-            f"<td class='num'>{float(r['dark_min']):.1f}</td>"
-            f"<td class='num'>{float(r['dark_pct']):.1f}%</td>"
-            f"<td class='num'>{ratio}</td>"
-            f"<td class='num'>{rest_gap}</td>"
-            f"<td class='num'>{int(r['block_count'])}</td>"
-            "</tr>"
-        )
-
-    block_rows_html: List[str] = []
-    for idx, b in enumerate(report["blocks"], start=1):
-        dark_flag = "sötét" if float(b.get("dark_min", 0.0)) > 0 else "világos"
-        block_rows_html.append(
-            "<tr>"
-            f"<td class='num'>{idx}</td>"
-            f"<td>{html.escape(b['runner'])}</td>"
-            f"<td class='num'>{b['start_seg']}-{b['end_seg']}</td>"
-            f"<td class='num'>{float(b['km']):.1f}</td>"
-            f"<td>{b['start'].strftime('%m-%d %H:%M')}</td>"
-            f"<td>{b['end'].strftime('%m-%d %H:%M')}</td>"
-            f"<td class='num'>{_format_duration(float(b['duration_min']))}</td>"
-            f"<td class='num'>{float(b['dark_min']):.1f}</td>"
-            f"<td>{dark_flag}</td>"
-            f"<td>{html.escape(str(b.get('stage_from', '')))} -> {html.escape(str(b.get('stage_to', '')))}</td>"
-            "</tr>"
-        )
-
-    segment_rows_html: List[str] = []
-    for s in report["segments"]:
-        pace_text = s.get("pace_raw") if s.get("pace_raw") else (f"{float(s.get('pace', 0.0)):.2f}" if float(s.get('pace', 0.0)) > 0 else "-")
-        stage_text = s.get("stage") or f"{s.get('stage_from', '')} -> {s.get('stage_to', '')}"
-        segment_rows_html.append(
-            "<tr>"
-            f"<td class='num'>{s['seg_id']}</td>"
-            f"<td>{html.escape(s['runner'])}</td>"
-            f"<td>{html.escape(str(s.get('biker', '')))}</td>"
-            f"<td class='num'>{float(s['km']):.1f}</td>"
-            f"<td class='num'>{html.escape(str(pace_text))}</td>"
-            f"<td>{s['start'].strftime('%m-%d %H:%M:%S')}</td>"
-            f"<td>{s['end'].strftime('%m-%d %H:%M:%S')}</td>"
-            f"<td class='num'>{float(s['duration_min']):.1f}</td>"
-            f"<td class='num'>{float(s['dark_min']):.1f}</td>"
-            f"<td>{html.escape(str(stage_text))}</td>"
-            "</tr>"
-        )
+    coord_count = len(stage_meta)
 
     segments_sorted = sorted(report["segments"], key=lambda x: int(x["seg_id"]))
     blocks_sorted = sorted(report["blocks"], key=lambda x: int(x["start_seg"]))
-    runner_first_seg: Dict[str, int] = {}
+    runner_summary = {str(r["name"]): r for r in report["runner_rows"]}
+
+    def _coord_for_seg(seg_id: int) -> Optional[Dict[str, Any]]:
+        return stage_meta.get(int(seg_id))
+
+    def _coord_links(meta: Optional[Dict[str, Any]], cls: str = "seg-nav") -> str:
+        if not meta:
+            return ""
+        lat = float(meta["lat"])
+        lon = float(meta["lon"])
+        coord_text = f"{lat:.6f}, {lon:.6f}"
+        google = _clean(meta.get("google_maps_url"))
+        if not google:
+            google = f"https://www.google.com/maps?q={lat},{lon}"
+        waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
+        return (
+            f"<div class='{cls}'>"
+            f"Koordináta: {html.escape(coord_text)} | "
+            f"<a href='{html.escape(google)}' target='_blank' rel='noopener noreferrer'>Google Maps</a> | "
+            f"<a href='{html.escape(waze)}' target='_blank' rel='noopener noreferrer'>Waze</a>"
+            "</div>"
+        )
+
+    point_coords: Dict[str, Dict[str, Any]] = {}
     for s in segments_sorted:
-        name = s["runner"]
+        point = _clean(s.get("stage_to", ""))
+        coord = _coord_for_seg(int(s["seg_id"]))
+        if point and coord:
+            point_coords[point] = coord
+
+    runner_first_seg: Dict[str, int] = {}
+    segments_by_runner: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for s in segments_sorted:
+        name = str(s["runner"])
+        segments_by_runner[name].append(s)
         if name not in runner_first_seg:
             runner_first_seg[name] = int(s["seg_id"])
     runner_order = [name for name, _ in sorted(runner_first_seg.items(), key=lambda kv: kv[1])]
 
-    segments_by_runner: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for s in segments_sorted:
-        segments_by_runner[s["runner"]].append(s)
-    blocks_by_runner: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for b in blocks_sorted:
-        blocks_by_runner[b["runner"]].append(b)
+    runner_nav: List[str] = []
+    runner_sections: List[str] = []
 
-    runner_breakdown_cards: List[str] = []
-    for runner_name in runner_order:
+    for idx, runner_name in enumerate(runner_order, start=1):
+        anchor = f"runner-{idx}"
+        runner_nav.append(f"<a class='runner-pill' href='#{anchor}'>{html.escape(runner_name)}</a>")
+
         r_segments = segments_by_runner.get(runner_name, [])
-        r_blocks = blocks_by_runner.get(runner_name, [])
         total_km = sum(float(s.get("km", 0.0)) for s in r_segments)
         total_min = sum(float(s.get("duration_min", 0.0)) for s in r_segments)
         dark_min = sum(float(s.get("dark_min", 0.0)) for s in r_segments)
+        summary = runner_summary.get(runner_name)
+        target_txt = "-" if not summary else f"{float(summary.get('target_km', 0.0)):.1f}"
+        assigned_txt = "-" if not summary else f"{float(summary.get('assigned_km', 0.0)):.1f}"
+        overflow_txt = "-" if not summary else f"{float(summary.get('overflow_km', 0.0)):.1f}"
 
-        block_rows: List[str] = []
-        for b in r_blocks:
-            dark_flag = "sötét" if float(b.get("dark_min", 0.0)) > 0 else "világos"
-            block_rows.append(
-                "<tr>"
-                f"<td class='num'>{int(b['start_seg'])}-{int(b['end_seg'])}</td>"
-                f"<td class='num'>{float(b.get('km', 0.0)):.1f}</td>"
-                f"<td>{html.escape(str(b.get('stage_from', '')))} -> {html.escape(str(b.get('stage_to', '')))}</td>"
-                f"<td>{b['start'].strftime('%m-%d %H:%M')}</td>"
-                f"<td>{b['end'].strftime('%m-%d %H:%M')}</td>"
-                f"<td class='num'>{_format_duration(float(b.get('duration_min', 0.0)))}</td>"
-                f"<td>{dark_flag}</td>"
-                "</tr>"
+        seg_cards: List[str] = []
+        for s in r_segments:
+            day_raw = _clean(s.get("day", ""))
+            day_label = "Éjszaka" if "🌙" in day_raw else "Nappal"
+            day_icon = "🌙" if "🌙" in day_raw else "☀️"
+            sponsor = _clean(s.get("stage_name", ""))
+            info_text = _clean(s.get("info", "")) or "Nincs külön leírás ehhez a szakaszhoz."
+            tags = _extract_info_tags(info_text)
+            tags_html = "".join(f"<span class='mini-tag'>{html.escape(t)}</span>" for t in tags)
+            biker = _clean(s.get("biker", "")) or "nincs"
+            pace_text = _clean(s.get("pace_raw", "")) or _clean(s.get("pace", ""))
+            run_time_text = _clean(s.get("run_time", "")) or _format_duration(float(s.get("duration_min", 0.0)))
+            sponsor_html = f"<div class='seg-sponsor'>{html.escape(sponsor)}</div>" if sponsor else ""
+            tag_row_html = f"<div class='tag-row'>{tags_html}</div>" if tags_html else ""
+            coord_html = _coord_links(_coord_for_seg(int(s["seg_id"])))
+            seg_cards.append(
+                "<article class='seg-card'>"
+                "<div class='seg-top'>"
+                f"<div class='seg-id'>Szakasz {int(s['seg_id'])}</div>"
+                f"<div class='seg-km'>{float(s.get('km', 0.0)):.1f} km</div>"
+                "</div>"
+                f"<div class='seg-route'>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</div>"
+                f"<div class='seg-time'>{s['start'].strftime('%m.%d %H:%M')} - {s['end'].strftime('%m.%d %H:%M')}</div>"
+                "<div class='seg-meta'>"
+                f"<span>{day_icon} {day_label}</span>"
+                f"<span>Tempó: {html.escape(str(pace_text))}</span>"
+                f"<span>Idő: {html.escape(str(run_time_text))}</span>"
+                f"<span>Kísérő: {html.escape(str(biker))}</span>"
+                "</div>"
+                f"{sponsor_html}"
+                f"{tag_row_html}"
+                f"{coord_html}"
+                f"<p class='seg-info'>{html.escape(info_text)}</p>"
+                "</article>"
             )
 
-        runner_breakdown_cards.append(
-            "<article class='runner-card'>"
-            "<div class='runner-head'>"
-            f"<h3>{html.escape(runner_name)}</h3>"
-            "<div class='runner-metrics'>"
-            f"<span class='pill'>{len(r_blocks)} blokk</span>"
-            f"<span class='pill'>{len(r_segments)} szakasz</span>"
-            f"<span class='pill'>{total_km:.1f} km</span>"
-            f"<span class='pill'>{_format_duration(total_min)}</span>"
-            f"<span class='pill'>Sötét: {dark_min:.1f} perc</span>"
+        runner_sections.append(
+            f"<section class='panel runner-panel' id='{anchor}'>"
+            f"<h2>{html.escape(runner_name)}</h2>"
+            "<div class='runner-kpis'>"
+            f"<span class='kpi'>Szakasz: {len(r_segments)}</span>"
+            f"<span class='kpi'>Összesen: {total_km:.1f} km</span>"
+            f"<span class='kpi'>Futásidő: {_format_duration(total_min)}</span>"
+            f"<span class='kpi'>Sötét: {dark_min:.1f} perc</span>"
+            f"<span class='kpi'>Cél/Kiosztás: {target_txt}/{assigned_txt} km</span>"
+            f"<span class='kpi'>Túllépés: {overflow_txt} km</span>"
             "</div>"
-            "</div>"
-            "<div class='table-wrap runner-table'>"
-            "<table>"
-            "<thead><tr>"
-            "<th class='num'>Szegmens</th><th class='num'>Km</th><th>Útvonal</th><th>Indulás</th><th>Érkezés</th><th class='num'>Időtartam</th><th>Fény</th>"
-            "</tr></thead>"
-            f"<tbody>{''.join(block_rows)}</tbody>"
-            "</table>"
-            "</div>"
+            f"<div class='seg-list'>{''.join(seg_cards)}</div>"
+            "</section>"
+        )
+
+    switch_cards: List[str] = []
+    for idx, b in enumerate(blocks_sorted):
+        prev_runner = "Rajt" if idx == 0 else str(blocks_sorted[idx - 1].get("runner", ""))
+        start_point = str(b.get("stage_from", "Rajt")) if idx > 0 else "Rajt"
+        stage_name = _clean(b.get("stage_name", ""))
+        stage_note_html = f"<div class='switch-note'>{html.escape(stage_name)}</div>" if stage_name else ""
+        switch_coord_html = _coord_links(point_coords.get(start_point), cls="switch-nav")
+        switch_cards.append(
+            "<article class='switch-card'>"
+            f"<div class='switch-title'>Váltás {idx + 1}: {html.escape(prev_runner)} → {html.escape(str(b.get('runner', '')))}</div>"
+            f"<div class='switch-line'><span>Idő:</span><strong>{b['start'].strftime('%m.%d %H:%M')}</strong></div>"
+            f"<div class='switch-line'><span>Hely:</span><strong>{html.escape(start_point)}</strong></div>"
+            f"<div class='switch-line'><span>Blokk:</span><strong>{int(b['start_seg'])}-{int(b['end_seg'])}</strong></div>"
+            f"<div class='switch-line'><span>Következő érkezés:</span><strong>{b['end'].strftime('%m.%d %H:%M')}</strong></div>"
+            f"{stage_note_html}"
+            f"{switch_coord_html}"
             "</article>"
         )
 
-    final_section = ""
-    if final_csv_snapshot:
-        f_runner_rows = []
-        for r in final_csv_snapshot.get("runner_rows", []):
-            target = "-" if r.get("target_km") is None else f"{float(r['target_km']):.1f}"
-            actual = "-" if r.get("actual_km") is None else f"{float(r['actual_km']):.1f}"
-            f_runner_rows.append(
-                "<tr>"
-                f"<td>{html.escape(str(r.get('name', '')))}</td>"
-                f"<td>{html.escape(str(r.get('pace', '')))}</td>"
-                f"<td class='num'>{target}</td>"
-                f"<td class='num'>{actual}</td>"
-                "</tr>"
-            )
-        f_seg_rows = []
-        for s in final_csv_snapshot.get("segment_rows", []):
-            f_seg_rows.append(
-                "<tr>"
-                f"<td class='num'>{s.get('seg_id', '')}</td>"
-                f"<td>{html.escape(str(s.get('runner', '')))}</td>"
-                f"<td>{html.escape(str(s.get('biker', '')))}</td>"
-                f"<td class='num'>{float(s.get('km', 0.0)):.1f}</td>"
-                f"<td>{html.escape(str(s.get('pace', '')))}</td>"
-                f"<td>{html.escape(str(s.get('run_time', '')))}</td>"
-                f"<td>{html.escape(str(s.get('arrival', '')))}</td>"
-                f"<td>{html.escape(str(s.get('day', '')))}</td>"
-                f"<td>{html.escape(str(s.get('stage', '')))}</td>"
-                "</tr>"
-            )
-
-        final_section = f"""
-  <section class=\"panel\"> 
-    <h2>final.csv Kivonat</h2>
-    <div class=\"table-wrap\" style=\"margin-top:8px;\"> 
-      <table>
-        <thead><tr><th>Futó</th><th>Tempó</th><th class=\"num\">Vállalt km</th><th class=\"num\">Futó távja km</th></tr></thead>
-        <tbody>{''.join(f_runner_rows)}</tbody>
-      </table>
-    </div>
-    <div class=\"table-wrap\" style=\"margin-top:10px;\"> 
-      <table>
-        <thead><tr><th class=\"num\">Szakasz</th><th>Futó</th><th>Kerékpáros</th><th class=\"num\">Km</th><th>Tempó</th><th>Futásidő</th><th>Érkezés</th><th>Napszak</th><th>Útvonal</th></tr></thead>
-        <tbody>{''.join(f_seg_rows)}</tbody>
-      </table>
-    </div>
-  </section>
-"""
+    night_cards: List[str] = []
+    for s in segments_sorted:
+        if "🌙" not in _clean(s.get("day", "")):
+            continue
+        night_cards.append(
+            "<article class='night-card'>"
+            f"<div class='night-title'>#{int(s['seg_id'])} - {html.escape(str(s.get('runner', '')))}</div>"
+            f"<div class='night-route'>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</div>"
+            f"<div class='night-time'>{s['start'].strftime('%m.%d %H:%M')} - {s['end'].strftime('%m.%d %H:%M')}</div>"
+            "</article>"
+        )
 
     return f"""<!doctype html>
 <html lang=\"hu\">
@@ -512,91 +556,226 @@ def _render_html(
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
   <title>{html.escape(title)}</title>
   <style>
-    :root {{ --bg:#f6f8fb; --card:#fff; --line:#d5dbe5; --ink:#182133; --muted:#5e6a80; }}
-    * {{ box-sizing: border-box; }}
-    body {{ margin:0; font-family:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif; color:var(--ink);
-      background: radial-gradient(1200px 500px at -10% -20%, #ddeafe 0%, rgba(221,234,254,0) 60%),
-                  radial-gradient(1000px 450px at 110% -10%, #ffe7cd 0%, rgba(255,231,205,0) 55%), var(--bg); }}
-    main {{ max-width:1200px; margin:0 auto; padding:20px 14px 42px; }}
-    .panel {{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }}
-    h1 {{ margin:0 0 8px; font-size:1.45rem; }} h2 {{ margin:4px 0 10px; font-size:1.1rem; }}
-    .team {{ margin:0 0 8px; color:var(--muted); font-weight:600; }}
-    .meta {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin-top:8px; }}
-    .kv {{ border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:#fcfdff; }}
-    .k {{ color:var(--muted); font-size:.8rem; }} .v {{ font-weight:700; font-size:1.02rem; }}
-    .table-wrap {{ overflow:auto; border:1px solid var(--line); border-radius:10px; }}
-    table {{ width:100%; border-collapse:collapse; min-width:900px; background:#fff; }}
-    th,td {{ border-bottom:1px solid var(--line); padding:7px 8px; white-space:nowrap; font-size:.9rem; }}
-    th {{ background:#f2f6fd; color:#233352; }}
-    .num {{ text-align:right; font-variant-numeric:tabular-nums; }}
-    .runner-grid {{ display:grid; grid-template-columns:1fr; gap:12px; }}
-    .runner-card {{ border:1px solid var(--line); border-radius:12px; padding:10px; background:#fbfdff; }}
-    .runner-head {{ display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:8px; }}
-    .runner-head h3 {{ margin:0; font-size:1rem; }}
-    .runner-metrics {{ display:flex; gap:6px; flex-wrap:wrap; }}
-    .pill {{ border:1px solid #c8d7ee; border-radius:999px; padding:3px 9px; font-size:.8rem; background:#eef4ff; color:#29416c; }}
-    .runner-table table {{ min-width:740px; }}
-    @media (max-width: 720px) {{
-      main {{ padding:14px 10px 28px; }}
-      .panel {{ padding:10px; border-radius:12px; }}
-      th,td {{ padding:6px 6px; font-size:.82rem; }}
+    :root {{
+      --bg:#f4f7fb;
+      --card:#ffffff;
+      --line:#d8dfeb;
+      --ink:#1b2333;
+      --muted:#5c6780;
+      --accent:#1f4c9a;
+      --accent-soft:#e9f0ff;
+      --night:#0f1f42;
+    }}
+    * {{ box-sizing:border-box; }}
+    body {{
+      margin:0;
+      color:var(--ink);
+      font-family:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(1000px 520px at -10% -20%, #dce9ff 0%, rgba(220,233,255,0) 60%),
+        radial-gradient(900px 440px at 120% -10%, #ffe8cd 0%, rgba(255,232,205,0) 58%),
+        var(--bg);
+    }}
+    main {{ max-width:980px; margin:0 auto; padding:12px 10px 28px; }}
+    .panel {{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:10px;
+      box-shadow:0 2px 8px rgba(17,34,68,.04);
+    }}
+    h1 {{ margin:0; font-size:1.3rem; }}
+    h2 {{ margin:0 0 8px; font-size:1.05rem; }}
+    .sub {{ margin:6px 0 0; color:var(--muted); font-size:.92rem; }}
+    .meta-grid {{
+      margin-top:10px;
+      display:grid;
+      gap:8px;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }}
+    .meta {{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:8px;
+      background:#fcfdff;
+    }}
+    .meta .k {{ display:block; color:var(--muted); font-size:.76rem; }}
+    .meta .v {{ display:block; font-weight:700; margin-top:2px; font-size:.92rem; }}
+    .runner-nav {{
+      display:flex;
+      gap:7px;
+      overflow-x:auto;
+      padding-bottom:2px;
+    }}
+    .runner-pill {{
+      display:inline-block;
+      white-space:nowrap;
+      text-decoration:none;
+      color:var(--accent);
+      border:1px solid #b8caef;
+      background:var(--accent-soft);
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:.86rem;
+      font-weight:600;
+    }}
+    .runner-kpis {{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-bottom:10px;
+    }}
+    .kpi {{
+      border:1px solid #c9d7f3;
+      background:#f2f6ff;
+      color:#28416e;
+      border-radius:999px;
+      padding:3px 8px;
+      font-size:.8rem;
+      white-space:nowrap;
+    }}
+    .seg-list {{ display:grid; gap:8px; }}
+    .seg-card {{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      background:#ffffff;
+    }}
+    .seg-top {{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:5px;
+    }}
+    .seg-id {{ font-weight:700; font-size:.92rem; }}
+    .seg-km {{ font-weight:700; color:#173f84; font-size:.92rem; }}
+    .seg-route {{ font-weight:600; font-size:.9rem; line-height:1.3; }}
+    .seg-time {{ margin-top:3px; color:var(--muted); font-size:.82rem; }}
+    .seg-meta {{
+      margin-top:6px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px 12px;
+      color:#2f3b52;
+      font-size:.8rem;
+    }}
+    .seg-sponsor {{
+      margin-top:7px;
+      display:inline-block;
+      border:1px dashed #b4c4e7;
+      border-radius:8px;
+      padding:3px 7px;
+      font-size:.78rem;
+      color:#2c4677;
+      background:#f4f8ff;
+    }}
+    .tag-row {{ margin-top:7px; }}
+    .mini-tag {{
+      display:inline-block;
+      margin:0 5px 5px 0;
+      border:1px solid #d0d9eb;
+      border-radius:999px;
+      padding:2px 7px;
+      font-size:.74rem;
+      color:#44506b;
+      background:#f8fbff;
+    }}
+    .seg-nav {{
+      margin-top:7px;
+      font-size:.78rem;
+      color:#334768;
+      line-height:1.35;
+    }}
+    .seg-nav a {{
+      color:#1f4c9a;
+      text-decoration:none;
+      font-weight:600;
+    }}
+    .seg-info {{ margin:7px 0 0; line-height:1.45; font-size:.87rem; }}
+    .switch-grid, .night-grid {{ display:grid; gap:8px; }}
+    .switch-card, .night-card {{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:9px;
+      background:#fff;
+    }}
+    .switch-title {{ font-weight:700; font-size:.9rem; margin-bottom:5px; }}
+    .switch-line {{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      font-size:.82rem;
+      margin-bottom:2px;
+    }}
+    .switch-line span {{ color:var(--muted); }}
+    .switch-note {{
+      margin-top:4px;
+      font-size:.76rem;
+      color:#3b5382;
+    }}
+    .switch-nav {{
+      margin-top:6px;
+      font-size:.76rem;
+      color:#334768;
+      line-height:1.35;
+    }}
+    .switch-nav a {{
+      color:#1f4c9a;
+      text-decoration:none;
+      font-weight:600;
+    }}
+    .night-title {{ font-weight:700; font-size:.9rem; }}
+    .night-route {{ margin-top:3px; font-size:.84rem; }}
+    .night-time {{ margin-top:2px; color:var(--muted); font-size:.8rem; }}
+    .foot {{ color:var(--muted); font-size:.76rem; }}
+    @media (min-width: 840px) {{
+      main {{ padding:18px 16px 36px; }}
+      .panel {{ padding:14px; margin-bottom:12px; }}
+      .meta-grid {{ grid-template-columns:repeat(6,minmax(0,1fr)); }}
+      .switch-grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
+      .night-grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
     }}
   </style>
 </head>
 <body>
 <main>
-  <section class=\"panel\"> 
+  <section class=\"panel\">
     <h1>{html.escape(title)}</h1>
-    <p class=\"team\">Csapat: {html.escape(team_name)}</p>
-    <div class=\"meta\">
-      <div class=\"kv\"><div class=\"k\">Státusz</div><div class=\"v\">{status}</div></div>
-      <div class=\"kv\"><div class=\"k\">Célfüggvény</div><div class=\"v\">{objective}</div></div>
-      <div class=\"kv\"><div class=\"k\">Rajt</div><div class=\"v\">{start_dt}</div></div>
-      <div class=\"kv\"><div class=\"k\">Befutás</div><div class=\"v\">{finish_dt}</div></div>
-      <div class=\"kv\"><div class=\"k\">Összidő</div><div class=\"v\">{total_duration}</div></div>
+    <p class=\"sub\">Csapat: {html.escape(team_name)} | Státusz: {status}</p>
+    <div class=\"meta-grid\">
+      <div class=\"meta\"><span class=\"k\">Rajt</span><span class=\"v\">{start_dt}</span></div>
+      <div class=\"meta\"><span class=\"k\">Befutás</span><span class=\"v\">{finish_dt}</span></div>
+      <div class=\"meta\"><span class=\"k\">Összidő</span><span class=\"v\">{total_duration}</span></div>
+      <div class=\"meta\"><span class=\"k\">Futók</span><span class=\"v\">{len(runner_order)} fő</span></div>
+      <div class=\"meta\"><span class=\"k\">Szakaszok</span><span class=\"v\">{len(segments_sorted)} db</span></div>
+      <div class=\"meta\"><span class=\"k\">Koordináták</span><span class=\"v\">{coord_count}/{len(segments_sorted)}</span></div>
     </div>
   </section>
 
-  <section class=\"panel\"> 
-    <h2>Futó Összefoglaló</h2>
-    <div class=\"table-wrap\"><table>
-      <thead><tr>
-        <th>Futó</th><th>Autó</th><th class=\"num\">Cél km</th><th class=\"num\">Kiosztott km</th>
-        <th class=\"num\">Túllépés</th><th class=\"num\">Hiány</th><th class=\"num\">Futásidő</th>
-        <th class=\"num\">Sötét perc</th><th class=\"num\">Sötét %</th><th class=\"num\">1. blokk</th>
-        <th class=\"num\">Pihenő (szegmens)</th><th class=\"num\">Blokkok</th>
-      </tr></thead>
-      <tbody>{''.join(runner_rows_html)}</tbody>
-    </table></div>
-  </section>
-
-  <section class=\"panel\"> 
-    <h2>Blokk Idővonal</h2>
-    <div class=\"table-wrap\"><table>
-      <thead><tr>
-        <th class=\"num\">#</th><th>Futó</th><th class=\"num\">Szakaszok</th><th class=\"num\">Km</th>
-        <th>Indulás</th><th>Érkezés</th><th class=\"num\">Időtartam</th><th class=\"num\">Sötét perc</th><th>Fényviszony</th><th>Útvonal</th>
-      </tr></thead>
-      <tbody>{''.join(block_rows_html)}</tbody>
-    </table></div>
-  </section>
-
-  <section class=\"panel\"> 
-    <h2>Szakasz Idővonal</h2>
-    <div class=\"table-wrap\"><table>
-      <thead><tr>
-        <th class=\"num\">Szakasz</th><th>Futó</th><th>Kerékpáros</th><th class=\"num\">Km</th><th class=\"num\">Tempó perc/km</th>
-        <th>Indulás</th><th>Érkezés</th><th class=\"num\">Időtartam perc</th><th class=\"num\">Sötét perc</th><th>Útvonal</th>
-      </tr></thead>
-      <tbody>{''.join(segment_rows_html)}</tbody>
-    </table></div>
+  <section class=\"panel\">
+    <h2>Futók Gyors Elérése</h2>
+    <div class=\"runner-nav\">{''.join(runner_nav)}</div>
   </section>
 
   <section class=\"panel\">
-    <h2>Futónkénti Bontás (Sorrendben)</h2>
-    <div class=\"runner-grid\">{''.join(runner_breakdown_cards)}</div>
+    <h2>Autós Váltási Lista</h2>
+    <p class=\"sub\">A váltások blokkhatáron történnek. A \"Hely\" oszlop a következő futó rajtpontja.</p>
+    <div class=\"switch-grid\">{''.join(switch_cards)}</div>
   </section>
-{final_section}
+
+  <section class=\"panel\">
+    <h2>Éjszakai Szakaszok</h2>
+    <div class=\"night-grid\">{''.join(night_cards) if night_cards else "<div class='foot'>Nincs éjszakai szakasz jelölve.</div>"}</div>
+  </section>
+
+  {''.join(runner_sections)}
+
+  <section class=\"panel\">
+    <div class=\"foot\">Tipp: mobilon a futónevekre koppintva gyorsan a saját szakaszlistára ugorhatsz.</div>
+    <div class=\"foot\">Koordináta forrás: UB hivatalos szakaszoldal.</div>
+  </section>
 </main>
 </body>
 </html>
@@ -611,6 +790,11 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--team-name", default="Csiga Csillagok", help="Team name displayed in report")
     parser.add_argument("--race-date", default="2026-04-25", help="Race start date (YYYY-MM-DD)")
     parser.add_argument("--race-start", default="", help="Override race start HH:MM:SS")
+    parser.add_argument(
+        "--stage-meta",
+        default="data/stage_metadata.json",
+        help="Optional stage metadata JSON with coordinates",
+    )
     args = parser.parse_args(argv)
 
     race_date = datetime.strptime(args.race_date, "%Y-%m-%d").date()
@@ -621,8 +805,15 @@ def run_cli(argv: Optional[List[str]] = None) -> int:
         start_t = final_data["start_time"]
     else:
         start_t = datetime.strptime("12:15:00", "%H:%M:%S").time()
+    stage_meta = _load_stage_metadata(Path(args.stage_meta))
     report = _report_from_final_csv(final_data, race_date=race_date, race_start_time=start_t)
-    output_html = _render_html(report, args.title, args.team_name, final_csv_snapshot=final_data)
+    output_html = _render_html(
+        report,
+        args.title,
+        args.team_name,
+        final_csv_snapshot=final_data,
+        stage_meta=stage_meta,
+    )
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
