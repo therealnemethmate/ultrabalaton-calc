@@ -133,6 +133,7 @@ Minta konfiguráció:
   - `Brigi`: 1-19 (`day_only=true`)
   - `Máté`: 19-29
   - `Lajek`: 29-46
+  - `GLackó`: 38-49 (átfedésnél felülír)
 
 Futtatás:
 
@@ -143,7 +144,7 @@ python assign_bike_escorts.py \
   --output data/final.csv
 ```
 
-Megjegyzés: átfedő fix tartományoknál \"first wins\" szabály van (korábbi szabály élvez elsőbbséget).
+Megjegyzés: átfedő fix tartományoknál \"last wins\" szabály van (a későbbi fix tartomány felülír).
 
 ## GitHub Pages
 

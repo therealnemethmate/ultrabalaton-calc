@@ -613,6 +613,7 @@ def _render_html(
             f"<td>{sid}</td>"
             f"<td><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span></td>"
             f"<td>{runner_link}</td>"
+            f"<td>{html.escape(_clean(s.get('biker', '')) or '-')}</td>"
             f"<td>{switch_badge}</td>"
             f"<td>{km:.1f}</td>"
             f"<td>{km_end:.1f}</td>"
@@ -624,6 +625,7 @@ def _render_html(
             "<article class='timeline-card-mobile'>"
             f"<div class='timeline-card-top'><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span><strong>#{sid}</strong></div>"
             f"<div class='timeline-card-line'><span>Futó:</span><span>{runner_link}</span></div>"
+            f"<div class='timeline-card-line'><span>Kerékpáros:</span><span>{html.escape(_clean(s.get('biker', '')) or '-')}</span></div>"
             f"<div class='timeline-card-line'><span>Szakasz:</span><span>{km:.1f} km</span></div>"
             f"<div class='timeline-card-line'><span>Eddigi táv:</span><strong>{km_end:.1f} km</strong></div>"
             f"<div class='timeline-card-line'><span>Útvonal:</span><span>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</span></div>"
@@ -1060,6 +1062,7 @@ def _render_html(
               <th>#</th>
               <th>Autó</th>
               <th>Futó</th>
+              <th>Kerékpáros</th>
               <th>Jel</th>
               <th>Szakasz km</th>
               <th>Eddigi táv (km)</th>

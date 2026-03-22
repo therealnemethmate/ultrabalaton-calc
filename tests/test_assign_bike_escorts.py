@@ -33,7 +33,7 @@ class BikeEscortPostGenTests(unittest.TestCase):
         self.assertEqual(summary["Lilla"]["night_km"], 2.0)
         self.assertEqual(summary["Bianka"]["night_km"], 0.0)
 
-    def test_fixed_ranges_first_wins_and_day_only(self) -> None:
+    def test_fixed_ranges_last_wins_and_day_only(self) -> None:
         segments = [
             SegmentRow(seg_id=17, km=2.0, row_idx=0, biker="", is_night=False),
             SegmentRow(seg_id=18, km=2.0, row_idx=1, biker="", is_night=False),
@@ -54,9 +54,9 @@ class BikeEscortPostGenTests(unittest.TestCase):
             write_into_empty_only=False,
         )
         self.assertEqual(owner_by_segment[17], "Brigi")
-        self.assertEqual(owner_by_segment[18], "Brigi")
+        self.assertEqual(owner_by_segment[18], "Máté")
         self.assertEqual(owner_by_segment[19], "Máté")
-        self.assertEqual(owner_by_segment[28], "Máté")
+        self.assertEqual(owner_by_segment[28], "Lajek")
         self.assertEqual(owner_by_segment[29], "Lajek")
         self.assertEqual(summary["Brigi"]["target_km"], None)
         self.assertEqual(summary["Máté"]["target_km"], None)

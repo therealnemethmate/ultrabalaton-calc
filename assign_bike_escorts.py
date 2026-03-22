@@ -277,8 +277,6 @@ def assign_bikers(
         for s in segments:
             if s.seg_id < fr.start_seg or s.seg_id > fr.end_seg:
                 continue
-            if s.seg_id in fixed_assigned:
-                continue
             if fr.day_only and s.is_night:
                 continue
             has_existing = bool(owner_by_segment.get(s.seg_id, ""))
