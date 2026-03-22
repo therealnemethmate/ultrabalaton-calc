@@ -719,8 +719,8 @@ def _render_html(
             f"<tr class='{row_cls}'>"
             f"<td>{sid}</td>"
             f"<td><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span></td>"
-            f"<td>{runner_link}</td>"
-            f"<td>{html.escape(_clean(s.get('biker', '')) or '-')}</td>"
+            f"<td class='runner-cell'>{runner_link}</td>"
+            f"<td class='biker-cell'>{html.escape(_clean(s.get('biker', '')) or '-')}</td>"
             f"<td>{switch_badge}</td>"
             f"<td>{km:.1f}</td>"
             f"<td>{km_end:.1f}</td>"
@@ -731,8 +731,8 @@ def _render_html(
         timeline_mobile_cards.append(
             "<article class='timeline-card-mobile'>"
             f"<div class='timeline-card-top'><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span><strong>#{sid}</strong></div>"
-            f"<div class='timeline-card-line'><span>Futó:</span><span>{runner_link}</span></div>"
-            f"<div class='timeline-card-line'><span>Kerékpáros:</span><span>{html.escape(_clean(s.get('biker', '')) or '-')}</span></div>"
+            f"<div class='timeline-card-line timeline-card-runner'><span>Futó:</span><span>{runner_link}</span></div>"
+            f"<div class='timeline-card-line timeline-card-biker'><span>Kerékpáros:</span><span>{html.escape(_clean(s.get('biker', '')) or '-')}</span></div>"
             f"<div class='timeline-card-line'><span>Szakasz:</span><span>{km:.1f} km</span></div>"
             f"<div class='timeline-card-line'><span>Eddigi táv:</span><strong>{km_end:.1f} km</strong></div>"
             f"<div class='timeline-card-line'><span>Útvonal:</span><span>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</span></div>"
@@ -890,6 +890,15 @@ def _render_html(
     .timeline-card-line span:last-child {{
       text-align:right;
     }}
+    .timeline-card-line.timeline-card-runner span:last-child {{
+      font-weight:800;
+      color:#173f84;
+    }}
+    .timeline-card-line.timeline-card-biker span:last-child {{
+      color:#6f7a90;
+      font-size:.8rem;
+      font-weight:500;
+    }}
     .timeline-card-badge {{
       margin-top:5px;
     }}
@@ -917,6 +926,19 @@ def _render_html(
       color:var(--accent);
       text-decoration:none;
       font-weight:600;
+    }}
+    .timeline-table td.runner-cell {{
+      font-weight:800;
+      color:#152a4f;
+    }}
+    .timeline-table td.runner-cell a {{
+      color:#173f84;
+      font-weight:800;
+    }}
+    .timeline-table td.biker-cell {{
+      color:#6f7a90;
+      font-size:.78rem;
+      font-weight:500;
     }}
     .switch-badge {{
       display:inline-block;
