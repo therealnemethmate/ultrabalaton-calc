@@ -1,0 +1,9 @@
+{
+  "fixed_ranges": [
+    { "name": "Brigi", "start_seg": 1, "end_seg": 18, "day_only": true },
+    { "name": "Máté", "start_seg": 18, "end_seg": 28 },
+    { "name": "Lajek", "start_seg": 28, "end_seg": 44 }
+  ],
+  "fill_day_segments": false,
+  "write_into_empty_only": false
+}

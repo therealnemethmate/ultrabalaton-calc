@@ -129,6 +129,7 @@ def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
     from_col = -1
     to_col = -1
     runner_col = -1
+    biker_col = -1
     pace_col = -1
     run_col = -1
     arr_col = -1
@@ -146,6 +147,8 @@ def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
                 to_col = j
             elif c == "FUTÓ":
                 runner_col = j
+            elif c == "KERÉKPÁROS":
+                biker_col = j
             elif c == "TEMPÓ":
                 pace_col = j
             elif c == "FUTÁSIDŐ":
@@ -175,6 +178,7 @@ def _parse_final_csv(final_csv_path: Path) -> Dict[str, Any]:
             segment_rows.append({
                 "seg_id": seg_id,
                 "runner": _clean(row[runner_col]) if runner_col < len(row) else "",
+                "biker": _clean(row[biker_col]) if biker_col >= 0 and biker_col < len(row) else "",
                 "km": km,
                 "pace": _clean(row[pace_col]) if pace_col < len(row) else "",
                 "run_time": _clean(row[run_col]) if run_col < len(row) else "",
@@ -248,6 +252,7 @@ def _report_from_final_csv(final_csv_data: Dict[str, Any], race_date: date, race
         segments.append({
             "seg_id": int(s["seg_id"]),
             "runner": _clean(s.get("runner", "")),
+            "biker": _clean(s.get("biker", "")),
             "km": float(s.get("km", 0.0)),
             "pace": pace_val,
             "pace_raw": pace_raw,
@@ -379,6 +384,7 @@ def _render_html(
             "<tr>"
             f"<td class='num'>{s['seg_id']}</td>"
             f"<td>{html.escape(s['runner'])}</td>"
+            f"<td>{html.escape(str(s.get('biker', '')))}</td>"
             f"<td class='num'>{float(s['km']):.1f}</td>"
             f"<td class='num'>{html.escape(str(pace_text))}</td>"
             f"<td>{s['start'].strftime('%m-%d %H:%M:%S')}</td>"
@@ -471,6 +477,7 @@ def _render_html(
                 "<tr>"
                 f"<td class='num'>{s.get('seg_id', '')}</td>"
                 f"<td>{html.escape(str(s.get('runner', '')))}</td>"
+                f"<td>{html.escape(str(s.get('biker', '')))}</td>"
                 f"<td class='num'>{float(s.get('km', 0.0)):.1f}</td>"
                 f"<td>{html.escape(str(s.get('pace', '')))}</td>"
                 f"<td>{html.escape(str(s.get('run_time', '')))}</td>"
@@ -491,7 +498,7 @@ def _render_html(
     </div>
     <div class=\"table-wrap\" style=\"margin-top:10px;\"> 
       <table>
-        <thead><tr><th class=\"num\">Szakasz</th><th>Futó</th><th class=\"num\">Km</th><th>Tempó</th><th>Futásidő</th><th>Érkezés</th><th>Napszak</th><th>Útvonal</th></tr></thead>
+        <thead><tr><th class=\"num\">Szakasz</th><th>Futó</th><th>Kerékpáros</th><th class=\"num\">Km</th><th>Tempó</th><th>Futásidő</th><th>Érkezés</th><th>Napszak</th><th>Útvonal</th></tr></thead>
         <tbody>{''.join(f_seg_rows)}</tbody>
       </table>
     </div>
@@ -578,7 +585,7 @@ def _render_html(
     <h2>Szakasz Idővonal</h2>
     <div class=\"table-wrap\"><table>
       <thead><tr>
-        <th class=\"num\">Szakasz</th><th>Futó</th><th class=\"num\">Km</th><th class=\"num\">Tempó perc/km</th>
+        <th class=\"num\">Szakasz</th><th>Futó</th><th>Kerékpáros</th><th class=\"num\">Km</th><th class=\"num\">Tempó perc/km</th>
         <th>Indulás</th><th>Érkezés</th><th class=\"num\">Időtartam perc</th><th class=\"num\">Sötét perc</th><th>Útvonal</th>
       </tr></thead>
       <tbody>{''.join(segment_rows_html)}</tbody>

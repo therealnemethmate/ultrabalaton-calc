@@ -6,8 +6,11 @@ on:
       - main
     paths:
       - build_static_html.py
+      - assign_bike_escorts.py
       - requirements.txt
       - data/final.csv
+      - data/bike_escorts.json
+      - data/bike_escorts.sample.json
       - .github/workflows/pages.yml
       - docs/**
   workflow_dispatch:
@@ -35,6 +38,17 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Optional bike escort post-gen
+        run: |
+          if [ -f data/bike_escorts.json ]; then
+            python assign_bike_escorts.py \
+              --final-csv data/final.csv \
+              --config data/bike_escorts.json \
+              --output data/final.csv
+          else
+            echo "No data/bike_escorts.json found, skipping bike escort post-gen."
+          fi
 
       - name: Build static HTML from final.csv
         run: |

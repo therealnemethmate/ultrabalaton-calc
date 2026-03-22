@@ -1,0 +1,10 @@
+{
+  "bike_escorts": [
+    { "name": "Regi", "target_km": 20.0 },
+    { "name": "Lilla", "target_km": 16.0 },
+    { "name": "Bianka", "target_km": 16.0 }
+  ],
+  "priority": ["Regi", "Lilla", "Bianka"],
+  "fill_day_segments": true,
+  "write_into_empty_only": true
+}

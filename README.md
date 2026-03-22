@@ -105,6 +105,32 @@ The report includes:
 - block timeline with start/end timestamps
 - full segment-level timeline
 
+## Bike Escort Post-Gen (Előkészítés)
+
+Kerékpáros kísérőket post-process lépésben tudsz kiosztani a `final.csv`-re:
+- éjszakai szakaszok kitöltése elsőként,
+- prioritás első körben: `Regi`, `Lilla`, `Bianka`,
+- vállalt táv célérték alapján,
+- nappali szakaszok opcionális feltöltése, ha marad vállalt kapacitás.
+
+Minta konfiguráció:
+- `data/bike_escorts.sample.json`
+- Fix kivétel (beégetett aktuális terv): `data/bike_escorts.json`
+  - `Brigi`: 1-18 (`day_only=true`)
+  - `Máté`: 18-28
+  - `Lajek`: 28-44
+
+Futtatás:
+
+```bash
+python assign_bike_escorts.py \
+  --final-csv data/final.csv \
+  --config data/bike_escorts.json \
+  --output data/final.csv
+```
+
+Megjegyzés: átfedő fix tartományoknál \"first wins\" szabály van (korábbi szabály élvez elsőbbséget).
+
 ## GitHub Pages
 
 Repository includes workflow: [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
