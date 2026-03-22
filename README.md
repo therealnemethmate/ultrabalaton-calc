@@ -12,6 +12,7 @@ This project implements a practical version of the optimizer from the shared pla
 ## Projekt Célja (UB)
 
 Az alkalmazás célja, hogy egy **UltraBalaton váltócsapat futóbeosztását optimalizálja**:
+
 - ki melyik szakaszt fusson,
 - ki hány blokkban fusson,
 - hogyan legyen a sorrend és a blokkhatár,
@@ -70,36 +71,22 @@ Write to file:
 python optimizer.py --input sample_input.json --output result.json --pretty
 ```
 
-## Extract From `Kalk.html`
+## Persistent Data Files
 
-Generate input directly from your exported Google Sheets HTML:
+The extracted UB planning inputs are stored as versioned files under `data/`:
 
-```bash
-python extract_kalk.py \
-  --kalk-html "/path/to/Kalk.html" \
-  --output ub26_input_from_kalk.json
-```
+- `data/runner_plan_input.json`: optimizer input (segments, runners, constraints)
+- `data/final.csv`: final plan table used for static HTML rendering
 
-If you want car groups from the known UB setup:
+Run optimizer with persistent input:
 
 ```bash
-python extract_kalk.py \
-  --kalk-html "/path/to/Kalk.html" \
-  --output ub26_input_from_kalk_with_cars.json \
-  --include-default-cars
-```
-
-Then run:
-
-```bash
-python optimizer.py --input ub26_input_from_kalk.json --output ub26_result_from_kalk.json --pretty
+python optimizer.py --input data/runner_plan_input.json --output result.json --pretty
 ```
 
 ## Build Static HTML Report
 
-The report supports two modes (`vagy-vagy`):
-- `full`: optimizer input + optimizer result + `Kalk.html`
-- `final-only`: only `final.csv` input (recommended for publishing)
+The publishing flow uses persistent `final.csv` input (`final-only`):
 
 ### Final-only mode (recommended)
 
@@ -113,19 +100,8 @@ python build_static_html.py \
   --race-date "2026-04-25"
 ```
 
-### Full mode
-
-```bash
-python build_static_html.py \
-  --kalk-html "/path/to/Kalk.html" \
-  --input ub26_input_car_order_lajek7_rest20_gabor13_nori11.json \
-  --result ub26_result_car_order_lajek7_rest20_gabor13_nori11.json \
-  --output docs/index.html \
-  --title "UB26 Futóbeosztás" \
-  --team-name "Csiga Csillagok"
-```
-
 The report includes:
+
 - runner summary (target/assigned/overflow/underfill, runtime, dark minutes)
 - block timeline with start/end timestamps
 - full segment-level timeline
@@ -135,10 +111,12 @@ The report includes:
 Repository includes workflow: [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
 
 Behavior:
+
 - on push to `main`, it regenerates `docs/index.html` from `data/final.csv`
 - deploys the `docs/` folder to GitHub Pages
 
 Setup in GitHub:
+
 1. Repository `Settings` -> `Pages`
 2. `Build and deployment` -> `Source`: `GitHub Actions`
 3. Commit and push changes to `main`
