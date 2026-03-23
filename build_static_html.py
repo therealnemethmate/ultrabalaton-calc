@@ -457,9 +457,11 @@ def _render_html(
         waze = f"https://waze.com/ul?ll={lat},{lon}&navigate=yes"
         return (
             f"<div class='{cls}'>"
-            f"Koordináta: {html.escape(coord_text)} | "
-            f"<a href='{html.escape(google)}' target='_blank' rel='noopener noreferrer'>Google Maps</a> | "
-            f"<a href='{html.escape(waze)}' target='_blank' rel='noopener noreferrer'>Waze</a>"
+            f"<span class='nav-coord'>Koordináta: {html.escape(coord_text)}</span>"
+            f"<div class='nav-actions'>"
+            f"<a class='nav-btn nav-btn-maps' href='{html.escape(google)}' target='_blank' rel='noopener noreferrer'>Google Maps</a>"
+            f"<a class='nav-btn nav-btn-waze' href='{html.escape(waze)}' target='_blank' rel='noopener noreferrer'>Waze</a>"
+            "</div>"
             "</div>"
         )
 
@@ -729,7 +731,7 @@ def _render_html(
             "</tr>"
         )
         timeline_mobile_cards.append(
-            "<article class='timeline-card-mobile'>"
+            f"<article class='timeline-card-mobile' data-start-ts='{int(s['start'].timestamp())}'>"
             f"<div class='timeline-card-top'><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span><strong>#{sid}</strong></div>"
             f"<div class='timeline-card-line timeline-card-runner'><span>Futó:</span><span>{runner_link}</span></div>"
             f"<div class='timeline-card-line timeline-card-biker'><span>Kerékpáros:</span><span>{html.escape(_clean(s.get('biker', '')) or '-')}</span></div>"
@@ -761,9 +763,12 @@ def _render_html(
         switch_coord_html = _coord_links(point_coords.get(start_point), cls="switch-nav")
         start_seg = int(b["start_seg"])
         km_at_switch = 0.0 if start_seg <= 1 else cumulative_end_km.get(start_seg - 1, 0.0)
+        sw_runner_name = _clean(b.get("runner", ""))
+        sw_raw_car = _clean(runner_car_map.get(sw_runner_name, "")) or "?"
+        sw_car_id = _display_car_id(sw_raw_car)
         switch_cards.append(
-            "<article class='switch-card'>"
-            f"<div class='switch-title'>Váltás {idx + 1}: {html.escape(prev_runner)} → {html.escape(str(b.get('runner', '')))}</div>"
+            f"<article class='switch-card' data-start-ts='{int(b['start'].timestamp())}'>"
+            f"<div class='switch-title'><span class='car-chip {_car_class(sw_car_id)}'>{html.escape(_car_label(sw_car_id))}</span> Váltás {idx + 1}: {html.escape(prev_runner)} → {html.escape(str(b.get('runner', '')))}</div>"
             f"<div class='switch-line'><span>Idő:</span><strong>{b['start'].strftime('%m.%d %H:%M')}</strong></div>"
             f"<div class='switch-line'><span>Hely:</span><strong>{html.escape(start_point)}</strong></div>"
             f"<div class='switch-line'><span>Blokk:</span><strong>{int(b['start_seg'])}-{int(b['end_seg'])}</strong></div>"
@@ -879,7 +884,7 @@ def _render_html(
       display:flex;
       justify-content:space-between;
       gap:8px;
-      font-size:.82rem;
+      font-size:.9rem;
       margin-bottom:2px;
     }}
     .timeline-card-line span:first-child {{
@@ -942,9 +947,9 @@ def _render_html(
     }}
     .switch-badge {{
       display:inline-block;
-      border:1px solid #d8d1b0;
-      background:#fff6d9;
-      color:#725d18;
+      border:1px solid #b45309;
+      background:#d97706;
+      color:#ffffff;
       border-radius:999px;
       padding:1px 7px;
       font-size:.72rem;
@@ -963,8 +968,8 @@ def _render_html(
       white-space:nowrap;
     }}
     .car-chip.car-1 {{ background:#e8f2ff; border-color:#b8d2ff; color:#1f4c9a; }}
-    .car-chip.car-2 {{ background:#ebf9f1; border-color:#bde6ce; color:#1b6b46; }}
-    .car-chip.car-3 {{ background:#fff4e7; border-color:#f3d2a6; color:#855525; }}
+    .car-chip.car-2 {{ background:#ebf9f1; border-color:#bde6ce; color:#155c3b; }}
+    .car-chip.car-3 {{ background:#fff4e7; border-color:#f3d2a6; color:#6f4420; }}
     .car-chip.car-4 {{ background:#f9eef9; border-color:#e5c6e5; color:#6f3f6f; }}
     .car-chip.car-na {{ background:#f2f4f8; border-color:#d8deea; color:#5f6d83; }}
     .timeline-row.car-1 td {{ background:#f7fbff; }}
@@ -990,8 +995,8 @@ def _render_html(
       background:var(--tab);
       color:#24426f;
       border-radius:10px;
-      padding:7px 11px;
-      font-size:.85rem;
+      padding:11px 14px;
+      font-size:.9rem;
       white-space:nowrap;
       font-weight:700;
       cursor:pointer;
@@ -1017,8 +1022,8 @@ def _render_html(
       border:1px solid #b8caef;
       background:var(--accent-soft);
       border-radius:999px;
-      padding:5px 10px;
-      font-size:.86rem;
+      padding:9px 14px;
+      font-size:.9rem;
       font-weight:600;
     }}
     .runner-kpis {{
@@ -1033,7 +1038,7 @@ def _render_html(
       color:#28416e;
       border-radius:999px;
       padding:3px 8px;
-      font-size:.8rem;
+      font-size:.85rem;
       white-space:nowrap;
     }}
     .seg-list {{ display:grid; gap:8px; }}
@@ -1079,13 +1084,13 @@ def _render_html(
       border:1px solid #d0d9eb;
       border-radius:999px;
       padding:2px 7px;
-      font-size:.74rem;
+      font-size:.78rem;
       color:#44506b;
       background:#f8fbff;
     }}
     .seg-nav {{
       margin-top:7px;
-      font-size:.78rem;
+      font-size:.84rem;
       color:#334768;
       line-height:1.35;
     }}
@@ -1102,12 +1107,12 @@ def _render_html(
       padding:9px;
       background:#fff;
     }}
-    .switch-title {{ font-weight:700; font-size:.9rem; margin-bottom:5px; }}
+    .switch-title {{ font-weight:700; font-size:1rem; margin-bottom:5px; }}
     .switch-line {{
       display:flex;
       justify-content:space-between;
       gap:8px;
-      font-size:.82rem;
+      font-size:.9rem;
       margin-bottom:2px;
     }}
     .switch-line span {{ color:var(--muted); }}
@@ -1118,7 +1123,7 @@ def _render_html(
     }}
     .switch-nav {{
       margin-top:6px;
-      font-size:.76rem;
+      font-size:.84rem;
       color:#334768;
       line-height:1.35;
     }}
@@ -1140,6 +1145,101 @@ def _render_html(
       z-index:12;
     }}
     .mobile-tabs .tab-nav {{ border-radius:14px; }}
+    .is-past {{ opacity:0.45; }}
+    .is-past .timeline-card-line:not(.timeline-card-runner) {{ display:none; }}
+    .is-past .timeline-card-badge {{ display:none; }}
+    .switch-card.is-past {{ opacity:0.5; }}
+    .switch-card.is-next {{ border-color:var(--accent); box-shadow:0 0 0 2px rgba(31,76,154,.15); }}
+    .now-divider {{
+      text-align:center;
+      font-size:.78rem;
+      font-weight:700;
+      color:#e05c00;
+      letter-spacing:.08em;
+      padding:8px 0;
+      border-top:2px solid #e05c00;
+      margin:4px 0;
+    }}
+    .show-past-btn {{
+      display:block;
+      width:100%;
+      padding:10px;
+      margin-bottom:8px;
+      border:1px dashed var(--line);
+      border-radius:10px;
+      background:transparent;
+      color:var(--muted);
+      font-size:.84rem;
+      cursor:pointer;
+      text-align:center;
+    }}
+    .nav-actions {{ display:flex; gap:8px; margin-top:8px; }}
+    .nav-btn {{
+      flex:1;
+      display:block;
+      text-align:center;
+      padding:10px;
+      border-radius:10px;
+      font-size:.9rem;
+      font-weight:700;
+      text-decoration:none;
+      border:1px solid;
+    }}
+    .nav-btn-maps {{ background:rgba(234,67,53,.08); border-color:rgba(234,67,53,.35); color:#c5221f; }}
+    .nav-btn-waze {{ background:rgba(51,204,255,.08); border-color:rgba(51,204,255,.35); color:#006699; }}
+    .nav-coord {{ display:none; }}
+    .runner-nav-wrap {{ position:relative; }}
+    .runner-nav-wrap::after {{
+      content:'';
+      position:absolute;
+      right:0; top:0; bottom:0;
+      width:32px;
+      background:linear-gradient(to right, transparent, var(--card));
+      pointer-events:none;
+    }}
+    .meta-toggle {{
+      display:inline-block;
+      border:none;
+      background:none;
+      color:var(--accent);
+      font-size:.82rem;
+      font-weight:600;
+      cursor:pointer;
+      padding:2px 4px;
+      text-decoration:underline;
+    }}
+    .meta-grid.is-collapsed {{ display:none; }}
+    .theme-toggle {{
+      border:1px solid var(--line);
+      background:var(--card);
+      color:var(--ink);
+      border-radius:8px;
+      padding:6px 10px;
+      font-size:.82rem;
+      cursor:pointer;
+      float:right;
+    }}
+    .next-switch-banner {{
+      border:2px solid var(--accent);
+      border-radius:12px;
+      padding:12px;
+      margin-bottom:10px;
+      background:var(--accent-soft);
+    }}
+    .next-switch-banner .nsb-title {{
+      font-weight:800;
+      font-size:1.05rem;
+      margin-bottom:6px;
+      color:var(--accent);
+    }}
+    .next-switch-banner .nsb-line {{
+      display:flex;
+      justify-content:space-between;
+      font-size:.9rem;
+      margin-bottom:3px;
+    }}
+    .next-switch-banner .nsb-line span:first-child {{ color:var(--muted); }}
+    .next-switch-banner .nsb-line strong {{ color:var(--ink); }}
     @media (min-width: 840px) {{
       main {{ padding:18px 16px 40px; }}
       .panel {{ padding:14px; margin-bottom:12px; }}
@@ -1149,15 +1249,162 @@ def _render_html(
       .timeline-desktop {{ display:block; }}
       .timeline-mobile {{ display:none; }}
       .mobile-tabs {{ display:none; }}
+      .nav-coord {{ display:inline; }}
+    }}
+    html[data-theme="dark"] {{
+      --bg:#0f1117;
+      --card:#1a1f2e;
+      --line:#2a3148;
+      --ink:#e8ecf4;
+      --muted:#8a94aa;
+      --accent:#6b9cf4;
+      --accent-soft:#1a2640;
+      --tab:#1e2640;
+      --tab-active:#2d5bbf;
+      --tab-active-ink:#ffffff;
+    }}
+    html[data-theme="dark"] body {{
+      background:#0f1117;
+    }}
+    html[data-theme="dark"] .meta,
+    html[data-theme="dark"] .summary-box {{
+      background:#151a28;
+    }}
+    html[data-theme="dark"] .timeline-table th {{
+      background:#1e2640;
+      color:#a0b4d8;
+    }}
+    html[data-theme="dark"] .car-chip {{
+      border-color:#3a4568;
+      background:#222840;
+      color:#b0bfdc;
+    }}
+    html[data-theme="dark"] .car-chip.car-1 {{ background:#1a2a4a; border-color:#2a4a7a; color:#7ab4ff; }}
+    html[data-theme="dark"] .car-chip.car-2 {{ background:#1a2e22; border-color:#2a5a3e; color:#7acea0; }}
+    html[data-theme="dark"] .car-chip.car-3 {{ background:#2a2218; border-color:#5a4228; color:#d4a870; }}
+    html[data-theme="dark"] .car-chip.car-4 {{ background:#2a1e2a; border-color:#5a3e5a; color:#c89ec8; }}
+    html[data-theme="dark"] .car-chip.car-na {{ background:#1e2030; border-color:#3a4058; color:#8a94aa; }}
+    html[data-theme="dark"] .timeline-row.car-1 td {{ background:#141e30; }}
+    html[data-theme="dark"] .timeline-row.car-2 td {{ background:#141e1a; }}
+    html[data-theme="dark"] .timeline-row.car-3 td {{ background:#1e1a14; }}
+    html[data-theme="dark"] .timeline-row.car-4 td {{ background:#1e141e; }}
+    html[data-theme="dark"] .timeline-row.car-na td {{ background:#161820; }}
+    html[data-theme="dark"] .switch-badge {{
+      background:#b45309;
+      border-color:#92400e;
+      color:#ffffff;
+    }}
+    html[data-theme="dark"] .kpi {{
+      border-color:#2a3a5a;
+      background:#1a2240;
+      color:#8ab0e8;
+    }}
+    html[data-theme="dark"] .seg-sponsor {{
+      border-color:#2a3a5a;
+      background:#1a2240;
+      color:#7a9ad0;
+    }}
+    html[data-theme="dark"] .mini-tag {{
+      border-color:#2a3a5a;
+      background:#1a2040;
+      color:#8a9ab8;
+    }}
+    html[data-theme="dark"] .mobile-tabs {{
+      background:rgba(15,17,23,.92);
+      border-top-color:#2a3148;
+    }}
+    html[data-theme="dark"] .tab-btn {{
+      border-color:#2a3a5a;
+      background:var(--tab);
+      color:#8ab0e8;
+    }}
+    html[data-theme="dark"] .runner-pill {{
+      border-color:#2a4a7a;
+      background:#1a2640;
+      color:#7ab4ff;
+    }}
+    html[data-theme="dark"] .nav-btn-maps {{ background:rgba(234,67,53,.12); color:#f87171; }}
+    html[data-theme="dark"] .nav-btn-waze {{ background:rgba(51,204,255,.12); color:#67d4f0; }}
+    html[data-theme="dark"] .next-switch-banner {{
+      border-color:#2d5bbf;
+      background:#1a2640;
+    }}
+    html[data-theme="dark"] .tab-nav {{
+      background:#1a1f2e;
+      border-color:#2a3148;
+    }}
+    html[data-theme="dark"] .timeline-wrap {{
+      background:#1a1f2e;
+      border-color:#2a3148;
+    }}
+    html[data-theme="dark"] .timeline-card-mobile,
+    html[data-theme="dark"] .switch-card,
+    html[data-theme="dark"] .seg-card {{
+      background:#1a1f2e;
+      border-color:#2a3148;
+    }}
+    html[data-theme="dark"] .show-past-btn {{
+      border-color:#2a3148;
+      color:#8a94aa;
+    }}
+    html[data-theme="dark"] .now-divider {{
+      color:#f59e0b;
+      border-color:#f59e0b;
+    }}
+    @media (prefers-color-scheme: dark) {{
+      html:not([data-theme="light"]) {{
+        --bg:#0f1117;
+        --card:#1a1f2e;
+        --line:#2a3148;
+        --ink:#e8ecf4;
+        --muted:#8a94aa;
+        --accent:#6b9cf4;
+        --accent-soft:#1a2640;
+        --tab:#1e2640;
+        --tab-active:#2d5bbf;
+        --tab-active-ink:#ffffff;
+      }}
+      html:not([data-theme="light"]) body {{ background:#0f1117; }}
+      html:not([data-theme="light"]) .meta,
+      html:not([data-theme="light"]) .summary-box {{ background:#151a28; }}
+      html:not([data-theme="light"]) .timeline-table th {{ background:#1e2640; color:#a0b4d8; }}
+      html:not([data-theme="light"]) .car-chip {{ border-color:#3a4568; background:#222840; color:#b0bfdc; }}
+      html:not([data-theme="light"]) .car-chip.car-1 {{ background:#1a2a4a; border-color:#2a4a7a; color:#7ab4ff; }}
+      html:not([data-theme="light"]) .car-chip.car-2 {{ background:#1a2e22; border-color:#2a5a3e; color:#7acea0; }}
+      html:not([data-theme="light"]) .car-chip.car-3 {{ background:#2a2218; border-color:#5a4228; color:#d4a870; }}
+      html:not([data-theme="light"]) .car-chip.car-4 {{ background:#2a1e2a; border-color:#5a3e5a; color:#c89ec8; }}
+      html:not([data-theme="light"]) .car-chip.car-na {{ background:#1e2030; border-color:#3a4058; color:#8a94aa; }}
+      html:not([data-theme="light"]) .timeline-row.car-1 td {{ background:#141e30; }}
+      html:not([data-theme="light"]) .timeline-row.car-2 td {{ background:#141e1a; }}
+      html:not([data-theme="light"]) .timeline-row.car-3 td {{ background:#1e1a14; }}
+      html:not([data-theme="light"]) .timeline-row.car-4 td {{ background:#1e141e; }}
+      html:not([data-theme="light"]) .timeline-row.car-na td {{ background:#161820; }}
+      html:not([data-theme="light"]) .switch-badge {{ background:#b45309; border-color:#92400e; color:#ffffff; }}
+      html:not([data-theme="light"]) .kpi {{ border-color:#2a3a5a; background:#1a2240; color:#8ab0e8; }}
+      html:not([data-theme="light"]) .seg-sponsor {{ border-color:#2a3a5a; background:#1a2240; color:#7a9ad0; }}
+      html:not([data-theme="light"]) .mini-tag {{ border-color:#2a3a5a; background:#1a2040; color:#8a9ab8; }}
+      html:not([data-theme="light"]) .mobile-tabs {{ background:rgba(15,17,23,.92); border-top-color:#2a3148; }}
+      html:not([data-theme="light"]) .tab-btn {{ border-color:#2a3a5a; background:var(--tab); color:#8ab0e8; }}
+      html:not([data-theme="light"]) .runner-pill {{ border-color:#2a4a7a; background:#1a2640; color:#7ab4ff; }}
+      html:not([data-theme="light"]) .nav-btn-maps {{ background:rgba(234,67,53,.12); color:#f87171; }}
+      html:not([data-theme="light"]) .nav-btn-waze {{ background:rgba(51,204,255,.12); color:#67d4f0; }}
+      html:not([data-theme="light"]) .next-switch-banner {{ border-color:#2d5bbf; background:#1a2640; }}
+      html:not([data-theme="light"]) .tab-nav {{ background:#1a1f2e; border-color:#2a3148; }}
+      html:not([data-theme="light"]) .timeline-wrap {{ background:#1a1f2e; border-color:#2a3148; }}
+      html:not([data-theme="light"]) .timeline-card-mobile,
+      html:not([data-theme="light"]) .switch-card,
+      html:not([data-theme="light"]) .seg-card {{ background:#1a1f2e; border-color:#2a3148; }}
+      html:not([data-theme="light"]) .show-past-btn {{ border-color:#2a3148; color:#8a94aa; }}
+      html:not([data-theme="light"]) .now-divider {{ color:#f59e0b; border-color:#f59e0b; }}
     }}
   </style>
 </head>
 <body>
 <main>
   <section class=\"panel\">
-    <h1>{html.escape(title)}</h1>
-    <p class=\"sub\">Csapat: {html.escape(team_name)} | Státusz: {status}</p>
-    <div class=\"meta-grid\">
+    <h1>{html.escape(title)} <button type=\"button\" class=\"theme-toggle\" id=\"theme-toggle\">🌙</button></h1>
+    <p class=\"sub\">Csapat: {html.escape(team_name)} | Státusz: {status} <button type=\"button\" class=\"meta-toggle\" id=\"meta-toggle\">Részletek ▼</button></p>
+    <div class=\"meta-grid is-collapsed\" id=\"meta-grid\">
       <div class=\"meta\"><span class=\"k\">Rajt</span><span class=\"v\">{start_dt}</span></div>
       <div class=\"meta\"><span class=\"k\">Befutás</span><span class=\"v\">{finish_dt}</span></div>
       <div class=\"meta\"><span class=\"k\">Összidő</span><span class=\"v\">{total_duration}</span></div>
@@ -1209,17 +1456,18 @@ def _render_html(
   </section>
 
   <section class=\"tab-page\" id=\"tab-switches\" data-tab-page=\"switches\">
+    <div id=\"next-switch-banner\" class=\"next-switch-banner\" style=\"display:none;\"></div>
     <section class=\"panel\">
       <h2>Autós Váltási Lista</h2>
       <p class=\"sub\">A váltások blokkhatáron történnek. A \"Hely\" a következő futó rajtpontja.</p>
-      <div class=\"switch-grid\">{''.join(switch_cards)}</div>
+      <div class=\"switch-grid\" id=\"switch-grid\">{''.join(switch_cards)}</div>
     </section>
   </section>
 
   <section class=\"tab-page\" id=\"tab-escorts\" data-tab-page=\"escorts\">
     <section class=\"panel\">
       <h2>Kísérők Gyors Elérése</h2>
-      <div class=\"runner-nav\">{''.join(escort_nav)}</div>
+      <div class=\"runner-nav-wrap\"><div class=\"runner-nav\">{''.join(escort_nav)}</div></div>
     </section>
     {''.join(escort_sections)}
   </section>
@@ -1227,7 +1475,7 @@ def _render_html(
   <section class=\"tab-page\" id=\"tab-runners\" data-tab-page=\"runners\">
     <section class=\"panel\">
       <h2>Futók Gyors Elérése</h2>
-      <div class=\"runner-nav\">{''.join(runner_nav)}</div>
+      <div class=\"runner-nav-wrap\"><div class=\"runner-nav\">{''.join(runner_nav)}</div></div>
     </section>
     {''.join(runner_sections)}
   </section>
@@ -1251,8 +1499,15 @@ def _render_html(
   (function() {{
     const pages = Array.from(document.querySelectorAll('[data-tab-page]'));
     const buttons = Array.from(document.querySelectorAll('.tab-btn[data-tab]'));
+    const scrollPositions = {{}};
+
+    function currentTab() {{
+      const active = pages.find(p => p.classList.contains('is-active'));
+      return active ? active.getAttribute('data-tab-page') : 'overview';
+    }}
 
     function activate(tabId, updateHash) {{
+      scrollPositions[currentTab()] = window.scrollY;
       pages.forEach((el) => {{
         const on = el.getAttribute('data-tab-page') === tabId;
         el.classList.toggle('is-active', on);
@@ -1264,7 +1519,8 @@ def _render_html(
       if (updateHash) {{
         history.replaceState(null, '', '#tab-' + tabId);
       }}
-      window.scrollTo({{ top: 0, behavior: 'smooth' }});
+      const saved = scrollPositions[tabId];
+      window.scrollTo({{ top: saved != null ? saved : 0, behavior: 'instant' }});
     }}
 
     buttons.forEach((btn) => {{
@@ -1274,33 +1530,124 @@ def _render_html(
     document.querySelectorAll('[data-open-tab=\"runners\"]').forEach((a) => {{
       a.addEventListener('click', (ev) => {{
         const href = a.getAttribute('href') || '';
-        if (!href.startsWith('#runner-')) {{
-          return;
-        }}
+        if (!href.startsWith('#runner-')) return;
         ev.preventDefault();
         activate('runners', false);
         const target = document.querySelector(href);
-        if (target) {{
-          setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
-        }}
+        if (target) setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
       }});
     }});
 
     document.querySelectorAll('[data-open-tab=\"escorts\"]').forEach((a) => {{
       a.addEventListener('click', (ev) => {{
         const href = a.getAttribute('href') || '';
-        if (!href.startsWith('#escort-')) {{
-          return;
-        }}
+        if (!href.startsWith('#escort-')) return;
         ev.preventDefault();
         activate('escorts', false);
         const target = document.querySelector(href);
-        if (target) {{
-          setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
-        }}
+        if (target) setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
       }});
     }});
 
+    /* ── Dark mode toggle ── */
+    const themeBtn = document.getElementById('theme-toggle');
+    function applyTheme(theme) {{
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('ub-theme', theme);
+      themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }}
+    const savedTheme = localStorage.getItem('ub-theme');
+    if (savedTheme) applyTheme(savedTheme);
+    themeBtn.addEventListener('click', () => {{
+      const cur = document.documentElement.getAttribute('data-theme');
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    }});
+
+    /* ── Header meta collapse ── */
+    const metaToggle = document.getElementById('meta-toggle');
+    const metaGrid = document.getElementById('meta-grid');
+    metaToggle.addEventListener('click', () => {{
+      const collapsed = metaGrid.classList.toggle('is-collapsed');
+      metaToggle.textContent = collapsed ? 'Részletek ▼' : 'Részletek ▲';
+    }});
+
+    /* ── Past/next marking for timeline cards ── */
+    const now = Date.now() / 1000;
+    const timelineCards = Array.from(document.querySelectorAll('.timeline-card-mobile[data-start-ts]'));
+    let nowInserted = false;
+    const timelineMobile = document.querySelector('.timeline-mobile');
+    let pastCount = 0;
+
+    timelineCards.forEach((card, i) => {{
+      const ts = parseInt(card.getAttribute('data-start-ts'), 10);
+      if (ts < now) {{
+        card.classList.add('is-past');
+        pastCount++;
+      }} else if (!nowInserted && timelineMobile) {{
+        const divider = document.createElement('div');
+        divider.className = 'now-divider';
+        divider.id = 'now-marker';
+        divider.textContent = 'MOST';
+        card.parentNode.insertBefore(divider, card);
+        nowInserted = true;
+      }}
+    }});
+
+    if (pastCount > 0 && timelineMobile) {{
+      const btn = document.createElement('button');
+      btn.className = 'show-past-btn';
+      btn.textContent = pastCount + ' korábbi szakasz mutatása';
+      btn.addEventListener('click', () => {{
+        timelineCards.forEach(c => c.classList.remove('is-past'));
+        btn.remove();
+      }});
+      timelineMobile.insertBefore(btn, timelineMobile.firstChild);
+    }}
+
+    /* ── Past/next marking for switch cards ── */
+    const switchCards = Array.from(document.querySelectorAll('.switch-card[data-start-ts]'));
+    let nextFound = false;
+    switchCards.forEach((card) => {{
+      const ts = parseInt(card.getAttribute('data-start-ts'), 10);
+      if (ts < now) {{
+        card.classList.add('is-past');
+      }} else if (!nextFound) {{
+        card.classList.add('is-next');
+        nextFound = true;
+
+        /* ── Next switch banner ── */
+        const banner = document.getElementById('next-switch-banner');
+        if (banner) {{
+          const title = card.querySelector('.switch-title');
+          const lines = Array.from(card.querySelectorAll('.switch-line'));
+          const timeLine = lines.find(l => l.querySelector('span') && l.querySelector('span').textContent.includes('Idő'));
+          const placeLine = lines.find(l => l.querySelector('span') && l.querySelector('span').textContent.includes('Hely'));
+          const navActions = card.querySelector('.nav-actions');
+
+          let bannerHtml = '<div class="nsb-title">Következő váltás</div>';
+          if (title) bannerHtml += '<div class="nsb-line"><strong>' + title.textContent + '</strong></div>';
+          if (timeLine) {{
+            const strong = timeLine.querySelector('strong');
+            bannerHtml += '<div class="nsb-line"><span>Idő:</span><strong>' + (strong ? strong.textContent : '') + '</strong></div>';
+          }}
+          if (placeLine) {{
+            const strong = placeLine.querySelector('strong');
+            bannerHtml += '<div class="nsb-line"><span>Hely:</span><strong>' + (strong ? strong.textContent : '') + '</strong></div>';
+          }}
+          if (navActions) bannerHtml += navActions.outerHTML;
+          banner.innerHTML = bannerHtml;
+          banner.style.display = '';
+        }}
+      }}
+    }});
+
+    /* ── Auto-scroll to now marker on overview tab activation ── */
+    const nowMarker = document.getElementById('now-marker');
+    if (nowMarker && currentTab() === 'overview') {{
+      setTimeout(() => nowMarker.scrollIntoView({{ behavior: 'smooth', block: 'center' }}), 200);
+    }}
+
+    /* ── Hash routing ── */
     const hash = window.location.hash || '';
     if (hash.startsWith('#tab-')) {{
       const tab = hash.replace('#tab-', '');
@@ -1310,15 +1657,11 @@ def _render_html(
     }} else if (hash.startsWith('#runner-')) {{
       activate('runners', false);
       const target = document.querySelector(hash);
-      if (target) {{
-        setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
-      }}
+      if (target) setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
     }} else if (hash.startsWith('#escort-')) {{
       activate('escorts', false);
       const target = document.querySelector(hash);
-      if (target) {{
-        setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
-      }}
+      if (target) setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
     }}
   }})();
 </script>
