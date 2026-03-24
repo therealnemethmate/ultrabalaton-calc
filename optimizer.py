@@ -33,6 +33,9 @@ class Runner:
     max_blocks: int
     car_id: Optional[str] = None
     max_overflow_km: Optional[float] = None
+    max_underfill_km: Optional[float] = None
+    first_leg_ratio_min: Optional[float] = None
+    first_leg_ratio_max: Optional[float] = None
     rest_priority: int = 1
     min_rest_gap_segments: Optional[int] = None
 
@@ -52,6 +55,7 @@ class SolverConfig:
     time_limit_sec: int = 30
     num_workers: int = 8
     max_overflow_km: Optional[float] = 4.0
+    max_underfill_km: Optional[float] = None
     min_block_km: float = 0.0
     min_rest_gap_segments: int = 0
     first_leg_ratio_min: float = 0.0
@@ -149,6 +153,32 @@ def parse_input(
         car_id = str(car_id_raw) if car_id_raw is not None else None
         max_overflow_raw = item.get("max_overflow_km")
         max_overflow = _to_float(max_overflow_raw, f"runners[{i}].max_overflow_km") if max_overflow_raw is not None else None
+        max_underfill_raw = item.get("max_underfill_km")
+        max_underfill = _to_float(max_underfill_raw, f"runners[{i}].max_underfill_km") if max_underfill_raw is not None else None
+        first_leg_ratio_min_raw = item.get("first_leg_ratio_min")
+        first_leg_ratio_max_raw = item.get("first_leg_ratio_max")
+        first_leg_ratio_min = (
+            _to_float(first_leg_ratio_min_raw, f"runners[{i}].first_leg_ratio_min")
+            if first_leg_ratio_min_raw is not None
+            else None
+        )
+        first_leg_ratio_max = (
+            _to_float(first_leg_ratio_max_raw, f"runners[{i}].first_leg_ratio_max")
+            if first_leg_ratio_max_raw is not None
+            else None
+        )
+        if first_leg_ratio_min is not None and not (0.0 <= first_leg_ratio_min <= 1.0):
+            raise InputError(f"runners[{i}].first_leg_ratio_min must be in [0,1].")
+        if first_leg_ratio_max is not None and not (0.0 <= first_leg_ratio_max <= 1.0):
+            raise InputError(f"runners[{i}].first_leg_ratio_max must be in [0,1].")
+        if (
+            first_leg_ratio_min is not None
+            and first_leg_ratio_max is not None
+            and first_leg_ratio_min > first_leg_ratio_max
+        ):
+            raise InputError(
+                f"runners[{i}].first_leg_ratio_min cannot be greater than first_leg_ratio_max."
+            )
         rest_priority = _to_int(item.get("rest_priority", 1), f"runners[{i}].rest_priority")
         if rest_priority < 0:
             raise InputError(f"runners[{i}].rest_priority must be >= 0.")
@@ -168,6 +198,9 @@ def parse_input(
                 max_blocks=max_blocks,
                 car_id=car_id,
                 max_overflow_km=max_overflow,
+                max_underfill_km=max_underfill,
+                first_leg_ratio_min=first_leg_ratio_min,
+                first_leg_ratio_max=first_leg_ratio_max,
                 rest_priority=rest_priority,
                 min_rest_gap_segments=min_rest_gap_segments,
             )
@@ -202,6 +235,11 @@ def parse_input(
             if "max_overflow_km" in settings_raw and settings_raw["max_overflow_km"] is not None
             else (None if "max_overflow_km" in settings_raw else 4.0)
         ),
+        max_underfill_km=(
+            _to_float(settings_raw["max_underfill_km"], "settings.max_underfill_km")
+            if "max_underfill_km" in settings_raw and settings_raw["max_underfill_km"] is not None
+            else None
+        ),
         min_block_km=_to_float(settings_raw.get("min_block_km", 0.0), "settings.min_block_km"),
         min_rest_gap_segments=_to_int(
             settings_raw.get("min_rest_gap_segments", 0),
@@ -232,6 +270,22 @@ def parse_input(
         raise InputError("settings.first_leg_ratio_max must be in [0,1].")
     if config.first_leg_ratio_min > config.first_leg_ratio_max:
         raise InputError("settings.first_leg_ratio_min cannot be greater than first_leg_ratio_max.")
+    for runner in runners:
+        eff_min_ratio = (
+            runner.first_leg_ratio_min
+            if runner.first_leg_ratio_min is not None
+            else config.first_leg_ratio_min
+        )
+        eff_max_ratio = (
+            runner.first_leg_ratio_max
+            if runner.first_leg_ratio_max is not None
+            else config.first_leg_ratio_max
+        )
+        if eff_min_ratio > eff_max_ratio:
+            raise InputError(
+                f"runner {runner.name!r} has effective first-leg ratio min > max "
+                f"({eff_min_ratio} > {eff_max_ratio})."
+            )
 
     known_car_ids = {runner.car_id for runner in runners if runner.car_id is not None}
     for i, car in enumerate(config.car_block_order):
@@ -411,6 +465,13 @@ def solve_runner_assignment(
         )
         if overflow_limit is not None:
             model.Add(km_vars[r] <= target_km[r] + int(round(overflow_limit * scale)))
+        underfill_limit = (
+            runners[r].max_underfill_km
+            if runners[r].max_underfill_km is not None
+            else config.max_underfill_km
+        )
+        if underfill_limit is not None:
+            model.Add(km_vars[r] >= target_km[r] - int(round(underfill_limit * scale)))
 
     if config.weights.change > 0:
         for seg_id, owner_name in current_owner.items():
@@ -623,7 +684,17 @@ def solve_runner_assignment(
 
         # Optional first-leg ratio constraints for 2-block runners:
         # first block distance must be in [min_ratio, max_ratio] of runner total distance.
-        if config.first_leg_ratio_min > 0.0 or config.first_leg_ratio_max < 1.0:
+        min_ratio = (
+            runner.first_leg_ratio_min
+            if runner.first_leg_ratio_min is not None
+            else config.first_leg_ratio_min
+        )
+        max_ratio = (
+            runner.first_leg_ratio_max
+            if runner.first_leg_ratio_max is not None
+            else config.first_leg_ratio_max
+        )
+        if min_ratio > 0.0 or max_ratio < 1.0:
             prefix_vars = []
             for e in range(s_count):
                 prefix_km = model.NewIntVar(
@@ -642,8 +713,8 @@ def solve_runner_assignment(
             double_runner_data[r]["first_block_km"] = first_block_km
 
             ratio_scale = 1000
-            min_num = int(round(config.first_leg_ratio_min * ratio_scale))
-            max_num = int(round(config.first_leg_ratio_max * ratio_scale))
+            min_num = int(round(min_ratio * ratio_scale))
+            max_num = int(round(max_ratio * ratio_scale))
             model.Add(ratio_scale * first_block_km >= min_num * km_vars[r])
             model.Add(ratio_scale * first_block_km <= max_num * km_vars[r])
 

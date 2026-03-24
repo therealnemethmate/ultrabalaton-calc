@@ -1,0 +1,442 @@
+{
+  "segments": [
+    {
+      "id": 1,
+      "km": 7.0
+    },
+    {
+      "id": 2,
+      "km": 4.6
+    },
+    {
+      "id": 3,
+      "km": 4.5
+    },
+    {
+      "id": 4,
+      "km": 3.3
+    },
+    {
+      "id": 5,
+      "km": 2.9
+    },
+    {
+      "id": 6,
+      "km": 3.7
+    },
+    {
+      "id": 7,
+      "km": 3.2
+    },
+    {
+      "id": 8,
+      "km": 1.9
+    },
+    {
+      "id": 9,
+      "km": 5.2
+    },
+    {
+      "id": 10,
+      "km": 3.2
+    },
+    {
+      "id": 11,
+      "km": 5.1
+    },
+    {
+      "id": 12,
+      "km": 4.3
+    },
+    {
+      "id": 13,
+      "km": 2.9
+    },
+    {
+      "id": 14,
+      "km": 5.0
+    },
+    {
+      "id": 15,
+      "km": 2.6
+    },
+    {
+      "id": 16,
+      "km": 2.8
+    },
+    {
+      "id": 17,
+      "km": 3.4
+    },
+    {
+      "id": 18,
+      "km": 2.6
+    },
+    {
+      "id": 19,
+      "km": 1.7
+    },
+    {
+      "id": 20,
+      "km": 3.1
+    },
+    {
+      "id": 21,
+      "km": 4.8
+    },
+    {
+      "id": 22,
+      "km": 4.3
+    },
+    {
+      "id": 23,
+      "km": 2.9
+    },
+    {
+      "id": 24,
+      "km": 4.0
+    },
+    {
+      "id": 25,
+      "km": 5.2
+    },
+    {
+      "id": 26,
+      "km": 1.7
+    },
+    {
+      "id": 27,
+      "km": 1.8
+    },
+    {
+      "id": 28,
+      "km": 4.6
+    },
+    {
+      "id": 29,
+      "km": 3.3
+    },
+    {
+      "id": 30,
+      "km": 3.2
+    },
+    {
+      "id": 31,
+      "km": 5.3
+    },
+    {
+      "id": 32,
+      "km": 0.9
+    },
+    {
+      "id": 33,
+      "km": 3.2
+    },
+    {
+      "id": 34,
+      "km": 2.0
+    },
+    {
+      "id": 35,
+      "km": 5.2
+    },
+    {
+      "id": 36,
+      "km": 2.1
+    },
+    {
+      "id": 37,
+      "km": 2.9
+    },
+    {
+      "id": 38,
+      "km": 3.5
+    },
+    {
+      "id": 39,
+      "km": 2.1
+    },
+    {
+      "id": 40,
+      "km": 2.2
+    },
+    {
+      "id": 41,
+      "km": 2.9
+    },
+    {
+      "id": 42,
+      "km": 5.3
+    },
+    {
+      "id": 43,
+      "km": 2.2
+    },
+    {
+      "id": 44,
+      "km": 3.3
+    },
+    {
+      "id": 45,
+      "km": 2.8
+    },
+    {
+      "id": 46,
+      "km": 4.5
+    },
+    {
+      "id": 47,
+      "km": 2.6
+    },
+    {
+      "id": 48,
+      "km": 2.9
+    },
+    {
+      "id": 49,
+      "km": 5.0
+    },
+    {
+      "id": 50,
+      "km": 6.0
+    },
+    {
+      "id": 51,
+      "km": 5.5
+    },
+    {
+      "id": 52,
+      "km": 3.4
+    },
+    {
+      "id": 53,
+      "km": 3.0
+    },
+    {
+      "id": 54,
+      "km": 3.0
+    },
+    {
+      "id": 55,
+      "km": 5.9
+    },
+    {
+      "id": 56,
+      "km": 4.8
+    },
+    {
+      "id": 57,
+      "km": 4.2
+    },
+    {
+      "id": 58,
+      "km": 3.5
+    }
+  ],
+  "runners": [
+    {
+      "name": "Bianka",
+      "target_km": 30,
+      "max_blocks": 2,
+      "car_id": "3",
+      "min_blocks": 2,
+      "rest_priority": 1,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0,
+      "first_leg_ratio_min": 0.5,
+      "first_leg_ratio_max": 0.8
+    },
+    {
+      "name": "Lackó",
+      "target_km": 27,
+      "max_blocks": 2,
+      "car_id": "3",
+      "min_blocks": 2,
+      "rest_priority": 1,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0,
+      "first_leg_ratio_min": 0.5,
+      "first_leg_ratio_max": 0.8
+    },
+    {
+      "name": "Gábor",
+      "target_km": 13,
+      "max_blocks": 2,
+      "car_id": "3",
+      "min_blocks": 2,
+      "rest_priority": 1,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Dóri",
+      "target_km": 30.0,
+      "max_blocks": 2,
+      "car_id": "2",
+      "min_blocks": 2,
+      "rest_priority": 1,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Nóri",
+      "target_km": 11,
+      "max_blocks": 2,
+      "car_id": "2",
+      "min_blocks": 2,
+      "rest_priority": 1,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Anna",
+      "target_km": 20.0,
+      "max_blocks": 2,
+      "car_id": "2",
+      "min_blocks": 2,
+      "rest_priority": 1,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Lilla",
+      "target_km": 12.0,
+      "max_blocks": 2,
+      "car_id": "3",
+      "min_blocks": 2,
+      "rest_priority": 1,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Peti",
+      "target_km": 25.0,
+      "max_blocks": 1,
+      "car_id": "1",
+      "min_blocks": 1,
+      "rest_priority": 0,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Regi",
+      "target_km": 25.0,
+      "max_blocks": 1,
+      "car_id": "1",
+      "min_blocks": 1,
+      "rest_priority": 0,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Lajek",
+      "target_km": 6.0,
+      "max_blocks": 1,
+      "car_id": "4",
+      "min_blocks": 1,
+      "rest_priority": 0,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    },
+    {
+      "name": "Levi",
+      "target_km": 12.0,
+      "max_blocks": 1,
+      "car_id": "1",
+      "min_blocks": 1,
+      "rest_priority": 0,
+      "max_overflow_km": 2.0,
+      "max_underfill_km": 2.0
+    }
+  ],
+  "current_owner": {
+    "1": "Bianka",
+    "2": "Bianka",
+    "3": "Lackó",
+    "4": "Lackó",
+    "5": "Lackó",
+    "6": "Gábor",
+    "7": "Gábor",
+    "8": "Dóri",
+    "9": "Dóri",
+    "10": "Dóri",
+    "11": "Dóri",
+    "12": "Nóri",
+    "13": "Anna",
+    "14": "Anna",
+    "15": "Anna",
+    "16": "Anna",
+    "17": "Lilla",
+    "18": "Lilla",
+    "19": "Peti",
+    "20": "Peti",
+    "21": "Peti",
+    "22": "Peti",
+    "23": "Peti",
+    "24": "Peti",
+    "25": "Peti",
+    "26": "Regi",
+    "27": "Regi",
+    "28": "Regi",
+    "29": "Regi",
+    "30": "Regi",
+    "31": "Regi",
+    "32": "Regi",
+    "33": "Regi",
+    "34": "Bianka",
+    "35": "Bianka",
+    "36": "Bianka",
+    "37": "Bianka",
+    "38": "Bianka",
+    "39": "Gábor",
+    "40": "Gábor",
+    "41": "Lackó",
+    "42": "Lackó",
+    "43": "Lackó",
+    "44": "Lackó",
+    "45": "Lackó",
+    "46": "Dóri",
+    "47": "Dóri",
+    "48": "Dóri",
+    "49": "Dóri",
+    "50": "Nóri",
+    "51": "Anna",
+    "52": "Anna",
+    "53": "Lajek",
+    "54": "Lajek",
+    "55": "Lilla",
+    "56": "Levi",
+    "57": "Levi",
+    "58": "Levi"
+  },
+  "settings": {
+    "scale": 10,
+    "time_limit_sec": 120,
+    "num_workers": 8,
+    "max_overflow_km": 2.0,
+    "require_every_runner_used": true,
+    "weights": {
+      "overflow": 4,
+      "underfill": 2,
+      "change": 1,
+      "car_span": 1,
+      "rest_gap": 0
+    },
+    "min_block_km": 4.0,
+    "first_leg_ratio_min": 0.35,
+    "first_leg_ratio_max": 0.49,
+    "enforce_second_round_order": true,
+    "enforce_car_block_grouping": true,
+    "min_rest_gap_segments": 20,
+    "car_block_order": [
+      "3",
+      "2",
+      "1",
+      "4",
+      "3",
+      "2"
+    ],
+    "max_underfill_km": 2.0
+  },
+  "fixed_owner": {}
+}
