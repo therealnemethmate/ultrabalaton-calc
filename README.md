@@ -132,8 +132,9 @@ Minta konfiguráció:
 - Fix kivétel (beégetett aktuális terv): `data/bike_escorts.json`
   - `Brigi`: 1-19 (`day_only=true`)
   - `Máté`: 18-29
-  - `Lajek`: 29-46
+  - `Márk`: 29-46
   - `GLackó`: 38-49 (átfedésnél felülír)
+  - `Lajek`: 50-58
 
 Futtatás:
 

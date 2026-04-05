@@ -695,6 +695,28 @@ def _render_html(
         cid = _clean(car_id)
         return f"Autó {cid}" if cid and cid != "?" else "Autó n/a"
 
+    def _car_anchor(car_id: str) -> str:
+        cid = _clean(car_id) or "na"
+        safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", cid)
+        return f"car-view-{safe}"
+
+    def _car_chip(car_id: str, extra_class: str = "") -> str:
+        cls = f"car-chip {_car_class(car_id)}"
+        if extra_class:
+            cls = f"{cls} {extra_class}"
+        return f"<span class='{cls}'>{html.escape(_car_label(car_id))}</span>"
+
+    def _car_link(car_id: str, extra_class: str = "") -> str:
+        return (
+            f"<a class='car-link' href='#{_car_anchor(car_id)}' data-open-tab='cars'>"
+            f"{_car_chip(car_id, extra_class)}</a>"
+        )
+
+    segments_by_car: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    runner_km_by_car: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    escort_km_by_car: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    car_first_seg: Dict[str, int] = {}
+
     for s in segments_sorted:
         sid = int(s["seg_id"])
         km = float(s.get("km", 0.0))
@@ -703,6 +725,13 @@ def _render_html(
         raw_car_id = _clean(runner_car_map.get(runner_name, "")) or "?"
         car_id = _display_car_id(raw_car_id)
         used_car_ids.add(car_id)
+        segments_by_car[car_id].append(s)
+        runner_km_by_car[car_id][runner_name] += km
+        escort_name = _clean(s.get("biker", ""))
+        if escort_name:
+            escort_km_by_car[car_id][escort_name] += km
+        if car_id not in car_first_seg:
+            car_first_seg[car_id] = sid
         runner_anchor = runner_anchor_by_name.get(runner_name, "")
         runner_link = (
             f"<a href='#{runner_anchor}' data-open-tab='runners'>{html.escape(runner_name)}</a>"
@@ -720,7 +749,7 @@ def _render_html(
         timeline_rows.append(
             f"<tr class='{row_cls}'>"
             f"<td>{sid}</td>"
-            f"<td><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span></td>"
+            f"<td>{_car_link(car_id)}</td>"
             f"<td class='runner-cell'>{runner_link}</td>"
             f"<td class='biker-cell'>{html.escape(_clean(s.get('biker', '')) or '-')}</td>"
             f"<td>{switch_badge}</td>"
@@ -732,7 +761,7 @@ def _render_html(
         )
         timeline_mobile_cards.append(
             f"<article class='timeline-card-mobile' data-start-ts='{int(s['start'].timestamp())}'>"
-            f"<div class='timeline-card-top'><span class='car-chip {_car_class(car_id)}'>{html.escape(_car_label(car_id))}</span><strong>#{sid}</strong></div>"
+            f"<div class='timeline-card-top'>{_car_link(car_id)}<strong>#{sid}</strong></div>"
             f"<div class='timeline-card-line timeline-card-runner'><span>Futó:</span><span>{runner_link}</span></div>"
             f"<div class='timeline-card-line timeline-card-biker'><span>Kerékpáros:</span><span>{html.escape(_clean(s.get('biker', '')) or '-')}</span></div>"
             f"<div class='timeline-card-line'><span>Szakasz:</span><span>{km:.1f} km</span></div>"
@@ -749,10 +778,192 @@ def _render_html(
             return (0, int(cid))
         return (1, cid)
 
+    car_order = [
+        cid for cid, _ in sorted(car_first_seg.items(), key=lambda kv: (kv[1], _car_sort_key(kv[0])))
+    ]
     car_legend = "".join(
-        f"<span class='car-chip {_car_class(cid)}'>{html.escape(_car_label(cid))}</span>"
-        for cid in sorted(used_car_ids, key=_car_sort_key)
+        _car_link(cid)
+        for cid in car_order
     )
+
+    car_nav: List[str] = []
+    car_quick_cards: List[str] = []
+    car_sections: List[str] = []
+
+    for car_id in car_order:
+        anchor = _car_anchor(car_id)
+        car_nav.append(
+            f"<a class='runner-pill' href='#{anchor}' data-open-tab='cars'>{html.escape(_car_label(car_id))}</a>"
+        )
+
+        c_segments = segments_by_car.get(car_id, [])
+        total_km = sum(float(s.get("km", 0.0)) for s in c_segments)
+        night_km_car = sum(float(s.get("km", 0.0)) for s in c_segments if "🌙" in _clean(s.get("day", "")))
+        day_km_car = max(0.0, total_km - night_km_car)
+        runner_stats = sorted(
+            runner_km_by_car.get(car_id, {}).items(),
+            key=lambda kv: (-kv[1], runner_first_seg.get(kv[0], 10**9), kv[0]),
+        )
+        escort_stats = sorted(
+            escort_km_by_car.get(car_id, {}).items(),
+            key=lambda kv: (-kv[1], escort_first_seg.get(kv[0], 10**9), kv[0]),
+        )
+        first_start = c_segments[0]["start"].strftime("%m.%d %H:%M") if c_segments else "-"
+        last_end = c_segments[-1]["end"].strftime("%m.%d %H:%M") if c_segments else "-"
+
+        windows: List[Dict[str, Any]] = []
+        if c_segments:
+            current_window = {
+                "start_seg": int(c_segments[0]["seg_id"]),
+                "end_seg": int(c_segments[0]["seg_id"]),
+                "start": c_segments[0]["start"],
+                "end": c_segments[0]["end"],
+                "km": float(c_segments[0].get("km", 0.0)),
+                "runners": {_clean(c_segments[0].get("runner", ""))},
+                "bikers": {
+                    _clean(c_segments[0].get("biker", ""))
+                }
+                if _clean(c_segments[0].get("biker", ""))
+                else set(),
+            }
+            for s in c_segments[1:]:
+                sid = int(s["seg_id"])
+                if sid == current_window["end_seg"] + 1:
+                    current_window["end_seg"] = sid
+                    current_window["end"] = s["end"]
+                    current_window["km"] += float(s.get("km", 0.0))
+                    current_window["runners"].add(_clean(s.get("runner", "")))
+                    biker_name = _clean(s.get("biker", ""))
+                    if biker_name:
+                        current_window["bikers"].add(biker_name)
+                else:
+                    windows.append(current_window)
+                    current_window = {
+                        "start_seg": sid,
+                        "end_seg": sid,
+                        "start": s["start"],
+                        "end": s["end"],
+                        "km": float(s.get("km", 0.0)),
+                        "runners": {_clean(s.get("runner", ""))},
+                        "bikers": {_clean(s.get("biker", ""))} if _clean(s.get("biker", "")) else set(),
+                    }
+            windows.append(current_window)
+
+        runner_items = "".join(
+            (
+                f"<li class='car-mini-item'><span>{html.escape(name)}</span>"
+                f"<strong>{km:.1f} km</strong></li>"
+            )
+            for name, km in runner_stats
+        ) or "<li class='car-mini-empty'>Nincs futó ehhez az autóhoz.</li>"
+        escort_items = "".join(
+            (
+                f"<li class='car-mini-item'><span>{html.escape(name)}</span>"
+                f"<strong>{km:.1f} km</strong></li>"
+            )
+            for name, km in escort_stats
+        ) or "<li class='car-mini-empty'>Nincs kísérő hozzárendelve.</li>"
+        window_cards = "".join(
+            (
+                "<article class='car-window-card'>"
+                f"<div class='car-window-top'><strong>Szakasz {w['start_seg']}-{w['end_seg']}</strong>"
+                f"<span>{w['km']:.1f} km</span></div>"
+                f"<div class='car-window-line'><span>Idő:</span><strong>{w['start'].strftime('%m.%d %H:%M')} - {w['end'].strftime('%m.%d %H:%M')}</strong></div>"
+                f"<div class='car-window-line'><span>Futók:</span><strong>{html.escape(', '.join(sorted(n for n in w['runners'] if n)) or '-')}</strong></div>"
+                f"<div class='car-window-line'><span>Kísérők:</span><strong>{html.escape(', '.join(sorted(n for n in w['bikers'] if n)) or '-')}</strong></div>"
+                "</article>"
+            )
+            for w in windows
+        ) or "<div class='car-mini-empty'>Nincs összefüggő autós blokk.</div>"
+
+        seg_cards: List[str] = []
+        for s in c_segments:
+            sid = int(s["seg_id"])
+            runner_name = _clean(s.get("runner", "")) or "n/a"
+            biker_name = _clean(s.get("biker", "")) or "nincs"
+            day_raw = _clean(s.get("day", ""))
+            day_label = "Éjszaka" if "🌙" in day_raw else "Nappal"
+            day_icon = "🌙" if "🌙" in day_raw else "☀️"
+            pace_text = _clean(s.get("pace_raw", "")) or _clean(s.get("pace", ""))
+            run_time_text = _clean(s.get("run_time", "")) or _format_duration(float(s.get("duration_min", 0.0)))
+            info_text = _clean(s.get("info", "")) or "Nincs külön leírás ehhez a szakaszhoz."
+            coord_html = _coord_links(_coord_for_seg(sid))
+            runner_anchor = runner_anchor_by_name.get(runner_name, "")
+            runner_html = (
+                f"<a href='#{runner_anchor}' data-open-tab='runners'>{html.escape(runner_name)}</a>"
+                if runner_anchor
+                else html.escape(runner_name)
+            )
+            escort_anchor = escort_anchor_by_name.get(_clean(s.get("biker", "")), "")
+            escort_html = (
+                f"<a href='#{escort_anchor}' data-open-tab='escorts'>{html.escape(biker_name)}</a>"
+                if escort_anchor
+                else html.escape(biker_name)
+            )
+            seg_cards.append(
+                "<article class='seg-card'>"
+                "<div class='seg-top'>"
+                f"<div class='seg-id'>Szakasz {sid}</div>"
+                f"<div class='seg-km'>{float(s.get('km', 0.0)):.1f} km</div>"
+                "</div>"
+                f"<div class='seg-route'>{html.escape(str(s.get('stage_from', '')))} → {html.escape(str(s.get('stage_to', '')))}</div>"
+                f"<div class='seg-time'>{s['start'].strftime('%m.%d %H:%M')} - {s['end'].strftime('%m.%d %H:%M')}</div>"
+                "<div class='seg-meta'>"
+                f"<span>{day_icon} {day_label}</span>"
+                f"<span>Futó: {runner_html}</span>"
+                f"<span>Kísérő: {escort_html}</span>"
+                f"<span>Tempó: {html.escape(str(pace_text))}</span>"
+                f"<span>Idő: {html.escape(str(run_time_text))}</span>"
+                "</div>"
+                f"{coord_html}"
+                f"<p class='seg-info'>{html.escape(info_text)}</p>"
+                "</article>"
+            )
+
+        car_quick_cards.append(
+            "<article class='car-select-card'>"
+            f"<a class='car-select-head' href='#{anchor}' data-open-tab='cars'>"
+            f"{_car_chip(car_id, 'car-select-chip')}<strong>Részletek</strong></a>"
+            "<div class='car-select-kpis'>"
+            f"<span class='kpi'>{len(c_segments)} szakasz</span>"
+            f"<span class='kpi'>{total_km:.1f} km</span>"
+            f"<span class='kpi'>{len(runner_stats)} futó</span>"
+            f"<span class='kpi'>{len(escort_stats)} kísérő</span>"
+            "</div>"
+            f"<p class='sub'>Aktív: {first_start} - {last_end}</p>"
+            "</article>"
+        )
+
+        car_sections.append(
+            f"<section class='panel car-panel' id='{anchor}'>"
+            f"<div class='car-panel-head'><h2>{html.escape(_car_label(car_id))}</h2>{_car_chip(car_id, 'is-static')}</div>"
+            "<div class='runner-kpis'>"
+            f"<span class='kpi'>Szakasz: {len(c_segments)}</span>"
+            f"<span class='kpi'>Összesen: {total_km:.1f} km</span>"
+            f"<span class='kpi'>Nappal: {day_km_car:.1f} km</span>"
+            f"<span class='kpi'>Éjszaka: {night_km_car:.1f} km</span>"
+            f"<span class='kpi'>Első indulás: {first_start}</span>"
+            f"<span class='kpi'>Utolsó érkezés: {last_end}</span>"
+            "</div>"
+            "<div class='car-layout'>"
+            "<div class='car-side-grid'>"
+            "<section class='panel'>"
+            "<h3>Futók</h3>"
+            f"<ul class='car-mini-list'>{runner_items}</ul>"
+            "</section>"
+            "<section class='panel'>"
+            "<h3>Kísérők</h3>"
+            f"<ul class='car-mini-list'>{escort_items}</ul>"
+            "</section>"
+            "</div>"
+            "<section class='panel'>"
+            "<h3>Autó ablakok</h3>"
+            f"<div class='car-window-grid'>{window_cards}</div>"
+            "</section>"
+            "</div>"
+            f"<div class='seg-list'>{''.join(seg_cards)}</div>"
+            "</section>"
+        )
 
     switch_cards: List[str] = []
     for idx, b in enumerate(blocks_sorted):
@@ -768,7 +979,7 @@ def _render_html(
         sw_car_id = _display_car_id(sw_raw_car)
         switch_cards.append(
             f"<article class='switch-card' data-start-ts='{int(b['start'].timestamp())}'>"
-            f"<div class='switch-title'><span class='car-chip {_car_class(sw_car_id)}'>{html.escape(_car_label(sw_car_id))}</span> Váltás {idx + 1}: {html.escape(prev_runner)} → {html.escape(str(b.get('runner', '')))}</div>"
+            f"<div class='switch-title'>{_car_link(sw_car_id)} Váltás {idx + 1}: {html.escape(prev_runner)} → {html.escape(str(b.get('runner', '')))}</div>"
             f"<div class='switch-line'><span>Idő:</span><strong>{b['start'].strftime('%m.%d %H:%M')}</strong></div>"
             f"<div class='switch-line'><span>Hely:</span><strong>{html.escape(start_point)}</strong></div>"
             f"<div class='switch-line'><span>Blokk:</span><strong>{int(b['start_seg'])}-{int(b['end_seg'])}</strong></div>"
@@ -789,6 +1000,9 @@ def _render_html(
     :root {{
       --bg:#f4f7fb;
       --card:#ffffff;
+      --surface-soft:#fbfdff;
+      --surface-raised:#ffffff;
+      --surface-tint:#f8fbff;
       --line:#d8dfeb;
       --ink:#1b2333;
       --muted:#5c6780;
@@ -819,6 +1033,7 @@ def _render_html(
     }}
     h1 {{ margin:0; font-size:1.3rem; }}
     h2 {{ margin:0 0 8px; font-size:1.06rem; }}
+    h3 {{ margin:0 0 8px; font-size:.96rem; }}
     .sub {{ margin:6px 0 0; color:var(--muted); font-size:.92rem; }}
     .meta-grid {{
       margin-top:10px;
@@ -1197,6 +1412,121 @@ def _render_html(
       background:linear-gradient(to right, transparent, var(--card));
       pointer-events:none;
     }}
+    .car-link {{
+      display:inline-flex;
+      text-decoration:none;
+    }}
+    .car-link .car-chip {{
+      cursor:pointer;
+      transition:transform .15s ease, box-shadow .15s ease;
+    }}
+    .car-link:hover .car-chip {{
+      transform:translateY(-1px);
+      box-shadow:0 4px 10px rgba(27,35,51,.08);
+    }}
+    .car-selector-grid {{
+      margin-top:10px;
+      display:grid;
+      gap:10px;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    }}
+    .car-select-card {{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      background:linear-gradient(180deg, var(--surface-raised) 0%, var(--surface-tint) 100%);
+      box-shadow:0 8px 18px rgba(17,34,68,.06);
+    }}
+    .car-select-head {{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      text-decoration:none;
+      color:var(--ink);
+      font-size:1rem;
+      font-weight:800;
+    }}
+    .car-select-kpis {{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }}
+    .car-panel-head {{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:8px;
+    }}
+    .car-layout {{
+      display:grid;
+      gap:10px;
+      margin-bottom:10px;
+    }}
+    .car-side-grid {{
+      display:grid;
+      gap:10px;
+    }}
+    .car-layout .panel,
+    .car-side-grid .panel {{
+      margin-bottom:0;
+      background:var(--surface-soft);
+    }}
+    .car-mini-list {{
+      list-style:none;
+      padding:0;
+      margin:0;
+      display:grid;
+      gap:6px;
+    }}
+    .car-mini-item,
+    .car-mini-empty {{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:8px 10px;
+      background:var(--surface-raised);
+      font-size:.9rem;
+    }}
+    .car-mini-item {{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }}
+    .car-mini-empty {{
+      color:var(--muted);
+    }}
+    .car-window-grid {{
+      display:grid;
+      gap:8px;
+    }}
+    .car-window-card {{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      background:var(--surface-raised);
+    }}
+    .car-window-top,
+    .car-window-line {{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+    }}
+    .car-window-top {{
+      margin-bottom:6px;
+      align-items:center;
+    }}
+    .car-window-line {{
+      font-size:.88rem;
+      margin-bottom:3px;
+    }}
+    .car-window-line span {{
+      color:var(--muted);
+    }}
+    .car-panel .seg-list {{
+      margin-top:10px;
+    }}
     .meta-toggle {{
       display:inline-block;
       border:none;
@@ -1246,6 +1576,7 @@ def _render_html(
       .meta-grid {{ grid-template-columns:repeat(6,minmax(0,1fr)); }}
       .summary-grid {{ grid-template-columns:repeat(5,minmax(0,1fr)); }}
       .switch-grid {{ grid-template-columns:repeat(2,minmax(0,1fr)); }}
+      .car-layout {{ grid-template-columns:minmax(280px, 340px) minmax(0, 1fr); }}
       .timeline-desktop {{ display:block; }}
       .timeline-mobile {{ display:none; }}
       .mobile-tabs {{ display:none; }}
@@ -1254,6 +1585,9 @@ def _render_html(
     html[data-theme="dark"] {{
       --bg:#0f1117;
       --card:#1a1f2e;
+      --surface-soft:#151a28;
+      --surface-raised:#171d2b;
+      --surface-tint:#1b2234;
       --line:#2a3148;
       --ink:#e8ecf4;
       --muted:#8a94aa;
@@ -1343,6 +1677,15 @@ def _render_html(
       background:#1a1f2e;
       border-color:#2a3148;
     }}
+    html[data-theme="dark"] .car-select-card,
+    html[data-theme="dark"] .car-layout .panel,
+    html[data-theme="dark"] .car-side-grid .panel,
+    html[data-theme="dark"] .car-mini-item,
+    html[data-theme="dark"] .car-mini-empty,
+    html[data-theme="dark"] .car-window-card {{
+      border-color:#2a3148;
+      box-shadow:none;
+    }}
     html[data-theme="dark"] .show-past-btn {{
       border-color:#2a3148;
       color:#8a94aa;
@@ -1414,6 +1757,7 @@ def _render_html(
     </div>
     <nav class=\"tab-nav top\" aria-label=\"Oldalfülek\">
       <button type=\"button\" class=\"tab-btn is-active\" data-tab=\"overview\">Áttekintés</button>
+      <button type=\"button\" class=\"tab-btn\" data-tab=\"cars\">Autók</button>
       <button type=\"button\" class=\"tab-btn\" data-tab=\"switches\">Váltások</button>
       <button type=\"button\" class=\"tab-btn\" data-tab=\"escorts\">Kísérők</button>
       <button type=\"button\" class=\"tab-btn\" data-tab=\"runners\">Futók</button>
@@ -1455,6 +1799,16 @@ def _render_html(
     </section>
   </section>
 
+  <section class=\"tab-page\" id=\"tab-cars\" data-tab-page=\"cars\">
+    <section class=\"panel\">
+      <h2>Autók Gyors Elérése</h2>
+      <p class=\"sub\">Autónként látod a hozzá tartozó futókat, kísérőket, aktív idősávokat és az összes releváns szakaszt.</p>
+      <div class=\"runner-nav-wrap\"><div class=\"runner-nav\">{''.join(car_nav)}</div></div>
+      <div class=\"car-selector-grid\">{''.join(car_quick_cards)}</div>
+    </section>
+    {''.join(car_sections)}
+  </section>
+
   <section class=\"tab-page\" id=\"tab-switches\" data-tab-page=\"switches\">
     <div id=\"next-switch-banner\" class=\"next-switch-banner\" style=\"display:none;\"></div>
     <section class=\"panel\">
@@ -1489,6 +1843,7 @@ def _render_html(
 <div class=\"mobile-tabs\" aria-hidden=\"false\">
   <nav class=\"tab-nav\" aria-label=\"Mobil oldalfülek\">
     <button type=\"button\" class=\"tab-btn is-active\" data-tab=\"overview\">Áttekintés</button>
+    <button type=\"button\" class=\"tab-btn\" data-tab=\"cars\">Autók</button>
     <button type=\"button\" class=\"tab-btn\" data-tab=\"switches\">Váltások</button>
     <button type=\"button\" class=\"tab-btn\" data-tab=\"escorts\">Kísérők</button>
     <button type=\"button\" class=\"tab-btn\" data-tab=\"runners\">Futók</button>
@@ -1544,6 +1899,17 @@ def _render_html(
         if (!href.startsWith('#escort-')) return;
         ev.preventDefault();
         activate('escorts', false);
+        const target = document.querySelector(href);
+        if (target) setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
+      }});
+    }});
+
+    document.querySelectorAll('[data-open-tab=\"cars\"]').forEach((a) => {{
+      a.addEventListener('click', (ev) => {{
+        const href = a.getAttribute('href') || '';
+        if (!href.startsWith('#car-view-')) return;
+        ev.preventDefault();
+        activate('cars', false);
         const target = document.querySelector(href);
         if (target) setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
       }});
@@ -1651,9 +2017,13 @@ def _render_html(
     const hash = window.location.hash || '';
     if (hash.startsWith('#tab-')) {{
       const tab = hash.replace('#tab-', '');
-      if (['overview', 'switches', 'escorts', 'runners'].includes(tab)) {{
+      if (['overview', 'cars', 'switches', 'escorts', 'runners'].includes(tab)) {{
         activate(tab, false);
       }}
+    }} else if (hash.startsWith('#car-view-')) {{
+      activate('cars', false);
+      const target = document.querySelector(hash);
+      if (target) setTimeout(() => target.scrollIntoView({{ behavior: 'smooth', block: 'start' }}), 80);
     }} else if (hash.startsWith('#runner-')) {{
       activate('runners', false);
       const target = document.querySelector(hash);

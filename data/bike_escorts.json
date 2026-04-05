@@ -12,7 +12,7 @@
       "end_seg": 29
     },
     {
-      "name": "Lajek",
+      "name": "Márk",
       "start_seg": 29,
       "end_seg": 46
     },
@@ -20,6 +20,11 @@
       "name": "GLackó",
       "start_seg": 38,
       "end_seg": 49
+    },
+    {
+      "name": "Lajek",
+      "start_seg": 50,
+      "end_seg": 58
     }
   ],
   "fill_day_segments": false,
